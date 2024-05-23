@@ -4,27 +4,63 @@
 <head>
     <title>Welcome</title>
     <style>
-        #welcome-message {
-            display: none;
-            position: fixed;
-            width: 300px;
-            height: 200px;
-            top: 30%;
-            left: 50%;
-            margin-left: -150px;
-            margin-top: -100px;
-            background-color: #f0f0f0;
-            border: 1px solid #333;
-            padding: 20px;
-            box-sizing: border-box;
+        .nine h1 {
             text-align: center;
-            border-radius: 10px;
-            /* bo góc */
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            /* thêm bóng */
+            font-size: 100px;
+            text-transform: uppercase;
+            color: #bfc07c;
+            letter-spacing: 1px;
+            font-family: "Playfair Display", serif;
+            font-weight: 400;
         }
 
-        #welcome-message button {
+        .nine h1 #span1 {
+            margin-top: 30px;
+            font-size: 15px;
+            color: #dfcdcd;
+            word-spacing: 1px;
+            font-weight: normal;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: "Raleway", sans-serif;
+            font-weight: 500;
+
+            display: grid;
+            grid-template-columns: 1fr max-content 1fr;
+            grid-template-rows: 27px 0;
+            grid-gap: 20px;
+            align-items: center;
+        }
+
+        .nine h1 #span2 {
+            margin-top: 5px;
+            font-size: 25px;
+            color: #8b4a4a;
+            word-spacing: 1px;
+            font-weight: normal;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: "Raleway", sans-serif;
+            font-weight: 500;
+
+            display: grid;
+            grid-template-columns: 1fr max-content 1fr;
+            grid-template-rows: 27px 0;
+            grid-gap: 20px;
+            align-items: center;
+        }
+
+        .nine h1 span:after,
+        .nine h1 span:before {
+            content: " ";
+            display: block;
+            border-bottom: 1px solid #ccc;
+            border-top: 1px solid #ccc;
+            height: 5px;
+            background-color: #f8f8f8;
+        }
+
+        .nine button {
             margin-top: 20px;
             border-radius: 5px;
             /* bo góc cho nút */
@@ -37,6 +73,19 @@
             border: none;
             cursor: pointer;
 
+        }
+
+        #close-welcome-message {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: gray;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
         body {
@@ -113,12 +162,18 @@
 </head>
 
 <body>
-    <div id="welcome-message">
-        <h1> KL website </h1>
-        <p> Xây dựng mô hình dự báo cho chuỗi thời gian đa biến áp dụng Vector Autoregressive Neural Network (VARNN)
-        </p>
-        <button id="close-welcome-message">Continue</button>
+    <div class="nine">
+        <h1>Time.Sync<span id="span1">Xây dựng mô hình dự báo cho chuỗi
+                thời gian đa biến</span>
+            <span id="span2">Vector Autoregressive Neural Network(VARNN)</span>
+        </h1>
+
     </div>
+    <button id="close-welcome-message">Continue</button>
+    <!-- <h1> KL </h1>
+        <p> Xây dựng mô hình dự báo cho chuỗi thời gian đa biến áp dụng Vector Autoregressive Neural Network (VARNN)
+        </p> -->
+
     <div id="loading">
         <div class="spinner"></div>
     </div>
@@ -131,6 +186,14 @@
             setTimeout(function () {
                 window.location.href = "/data";
             }, 1500);
+        });
+
+        // Thêm event listener cho phím Enter
+        $(document).keydown(function (e) {
+            if (e.keyCode === 13) { // Phím Enter
+                e.preventDefault();
+                $('#close-welcome-message').click();
+            }
         });
     </script>
 </body>
