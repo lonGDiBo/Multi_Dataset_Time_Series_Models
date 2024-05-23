@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>VARNN MODEL - 🕹</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            color: #be6123;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin: 20px;
+        }
+
+        form {
+            margin: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+
+        select,
+        input[type="submit"] {
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        table {
+            width: 75%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            margin: 20px auto;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>VARNN - VECTOR AUTOREGRESSIVE NEURAL NETWORK </h1>
+    <h2>Select Data</h2>
+    <form action="/data" method="post">
+        <label for="data">Choose a dataset:</label>
+        <select name="data" id="data">
+            <option value="GOOGLE">STOCK- GOOGLE</option>
+            <option value="APPLE">STOCK - APPLE</option>
+            <option value="AMAZON">STOCK - AMAZON</option>
+            <option value="Weather_dataset">WEATHER - DUC</option>
+            <option value="weather-HCM">WEATHER - HCM</option>
+        </select>
+        <input type="submit" value="Load Data">
+    </form>
+
+    <h2>Data</h2>
+    <table id="data-table">
+        {{ data | safe }}
+    </table>
+
+    {% if data_loaded %}
+    <h2>EDA - Exploratory Data Analysis</h2>
+    <form method="POST" action="/data">
+        <!-- Other form elements... -->
+        <select id="column-input" name="column">
+            {% for column in columns %}
+            <option value="{{ column }}">{{ column }}</option>
+            {% endfor %}
+        </select>
+        <input id="visualize-button" type="submit" value="Visual">
+        <p>selected column name:{{column_name}}</p>
+    </form>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $("#visualize-button").click(function (e) {
+                e.preventDefault();
+                var column = $("#column-input").val();
+                console.log('ten cot:', column);
+                $.post("/data", { column: column }, function (data) {
+                });
+            });
+        });
+    </script>
+
+
+    {% endif %}
+
+
+</body>
+
+</html>
