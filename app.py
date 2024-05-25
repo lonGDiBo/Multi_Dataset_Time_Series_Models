@@ -31,7 +31,10 @@ def data():
     stock_name = None
     data = None
     columns = None
+    num_columns = None
+    count_data = None
     file_path= None
+    
     global global_data
     global global_name
     if request.method == 'POST':
@@ -41,9 +44,12 @@ def data():
             data = load_data(f"./dataset/{file_path}")
             global_data = data.copy()
             global_name = stock_name
+            count_data = data.shape[0]
             data_loaded = True   
             columns = data.columns.tolist()
-    return render_template('main.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name)
+            num_columns = len(columns)
+    return render_template('main.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name,
+                           count_data=count_data,num_columns=num_columns,file_path=file_path)
 
 @app.route('/eda_column', methods=['GET', 'POST'])
 def eda_data():
