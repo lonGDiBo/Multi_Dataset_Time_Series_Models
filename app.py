@@ -48,7 +48,7 @@ def data():
             data_loaded = True   
             columns = data.columns.tolist()
             num_columns = len(columns)
-    return render_template('main.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name,
+    return render_template('index.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name,
                            count_data=count_data,num_columns=num_columns,file_path=file_path)
 
 @app.route('/eda_column', methods=['GET', 'POST'])
@@ -64,12 +64,16 @@ def eda_data():
             if global_name == 'GOOGLE' or global_name == 'APPLE' or global_name == 'AMAZON':
                 data_1['Date'] = pd.to_datetime(data_1['Date'])
                 plt.plot(data_1['Date'],data_1[column_name])
+                plt.xlabel('Date') 
             elif global_name == 'Weather_WS':
                 data_1['Date Time'] = pd.to_datetime(data_1['Date Time'])
-                plt.plot(data_1['Date Time'],data_1[column_name])
+                plt.plot(data_1['Date'],data_1[column_name])
+                plt.xlabel('Date Time') 
             elif global_name == 'weather-HCM':
                 data_1['date'] = pd.to_datetime(data_1['date'])
                 plt.plot(data_1['date'],data_1[column_name])
+                plt.xlabel('Date')  # Add x-axis label
+
             plt.title(column_name)
             plt.savefig('static/images/plot.png')
     return jsonify(column_name=column_name)
