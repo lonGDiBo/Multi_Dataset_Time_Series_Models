@@ -59,6 +59,33 @@
         document.querySelector(".overlay-side.overlay-side-white").addEventListener("click", toggleNav);
     </script>
 
+    <!-- Cuộn lên đầu trang khi nhấn arrowUp -->
+    <button onclick="topFunction()" id="Btn-arrow-up" title="Go to top">
+        <i class="fa fa-arrow-up"></i>
+    </button>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $(window).scroll(function () {
+                if ($(this).scrollTop() > 20) {
+                    $('#Btn-arrow-up').show();
+                } else {
+                    $('#Btn-arrow-up').hide();
+                }
+            });
+
+            $('#Btn-arrow-up').click(function () {
+                $(this).animate({ bottom: '100px', opacity: '0' }, 600, function () {
+                    $(this).css({ bottom: '-50px' }).hide();
+                });
+                $("html, body").animate({ scrollTop: 0 }, 600, function () {
+                    $('#Btn-arrow-up').show().animate({ bottom: '40px', opacity: '1' }, 600);
+                });
+                return false;
+            });
+        });
+    </script>
+
 
     <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i>01. Select Data</h2>
     <form action="/data" method="post">
@@ -72,6 +99,7 @@
         </select>
         <input type="submit" value="Load Data">
     </form>
+
 
     {% if data %}
     <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 02. Data overview: {{stock_name}}</h2>
@@ -90,7 +118,7 @@
 
     <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 03. EDA - Exploratory Data
         Analysis <i id="toggle-form" class="material-symbols-outlined"
-            style="color: #3652AD; cursor: pointer;">visibility</i>
+            style="color: #3652AD; cursor: pointer; margin-left: 15px;">visibility</i>
     </h2>
     <form id="eda-form" method="POST" action="/eda_column" style="display: none;">
         <p style="font-family: 'Montserrat', sans-serif; user-select: none;" id="selected-column">Select the column:
@@ -113,10 +141,12 @@
                 form.style.display = "block";
                 icon.textContent = 'visibility_off'; // Change the icon to 'visibility_off'
                 icon.style.color = "#332941";
+
             } else {
                 form.style.display = "none";
                 icon.textContent = 'visibility'; // Change the icon to 'visibility'
                 icon.style.color = "#3652AD";
+
             }
         });
     </script>
@@ -136,6 +166,7 @@
             });
         });
     </script>
+
 
     <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 04. Time series prediction</h2>
     {% endif %} <!-- Kết thúc của if load dữ liệu  -->
