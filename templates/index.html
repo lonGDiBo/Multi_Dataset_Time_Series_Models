@@ -56,6 +56,7 @@
             }
         }
         document.getElementById("menu-icon").addEventListener("click", toggleNav);
+        document.querySelector(".overlay-side.overlay-side-white").addEventListener("click", toggleNav);
     </script>
 
 
@@ -92,15 +93,16 @@
             style="color: #3652AD; cursor: pointer;">visibility</i>
     </h2>
     <form id="eda-form" method="POST" action="/eda_column" style="display: none;">
+        <p style="font-family: 'Montserrat', sans-serif; user-select: none;" id="selected-column">Select the column:
+        </p>
         <select id="column-input" name="column">
             {% for column in columns %}
             <option value="{{ column }}">{{ column }}</option>
             {% endfor %}
         </select>
         <input id="visualize-button" type="submit" value="Visual">
-        <p style="font-family: 'Montserrat', sans-serif; user-select: none;" id="selected-column">Select the column: </p>
         <div class="image-container">
-            <img id="plot" src="static/images/loading.gif" alt="Plot">
+            <img id="plot" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
     </form>
     <script>
