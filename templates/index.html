@@ -30,11 +30,12 @@
             <div><a href="http://example.com" target="_blank" class="my-link">Stock Forecasts </a></div>
             <div><a href="http://example.com" target="_blank" class="my-link">Earnings & Revenue</a></div>
             <div class="social-icons">
-                <i class="fab fa-facebook-f"></i>
-                <i class="fab fa-instagram"></i>
-                <i class="fab fa-github"></i>
-                <i class="fab fa-twitter"></i>
-                <i class="fab fa-linkedin-in"></i>
+                <a href="https://www.facebook.com/minhlong020102" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                <a href="https://www.instagram.com/khoi.iag/" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="https://github.com/lonGDiBo/VARNN_MODEL_WEBSITE" target="_blank"><i
+                        class="fab fa-github"></i></a>
+                <a href="https://twitter.com/yourusername" target="_blank"><i class="fab fa-twitter"></i></a>
+                <a href="https://www.linkedin.com/in/minhlongba/" target="_blank"><i class="fab fa-linkedin-in"></i></a>
             </div>
 
             <div id="ww_3e9735a04a280" v='1.3' loc='id'
@@ -66,37 +67,38 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Ẩn nút khi tải trang
+            $('#Btn-arrow-up').hide();
+
             $(window).scroll(function () {
-                if ($(this).scrollTop() > 20) {
-                    $('#Btn-arrow-up').show();
+                if ($(this).scrollTop() > 120) {
+                    $('#Btn-arrow-up').fadeIn();
                 } else {
-                    $('#Btn-arrow-up').hide();
+                    $('#Btn-arrow-up').fadeOut();
                 }
             });
 
             $('#Btn-arrow-up').click(function () {
-                $(this).animate({ bottom: '100px', opacity: '0' }, 600, function () {
-                    $(this).css({ bottom: '-50px' }).hide();
-                });
-                $("html, body").animate({ scrollTop: 0 }, 600, function () {
-                    $('#Btn-arrow-up').show().animate({ bottom: '40px', opacity: '1' }, 600);
-                });
+                $("html, body").animate({ scrollTop: 0 }, 600);
                 return false;
             });
         });
     </script>
 
-
     <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i>01. Select Data</h2>
     <form action="/data" method="post">
         <label for="data">Choose a dataset:</label>
         <select name="data" id="data">
+            <option value="">-- Please choose a dataset-- </option>
             <option value="GOOGLE">STOCK- GOOGLE</option>
             <option value="APPLE">STOCK - APPLE</option>
             <option value="AMAZON">STOCK - AMAZON</option>
             <option value="Weather_WS">WEATHER - DUC</option>
             <option value="weather-HCM">WEATHER - HCM</option>
         </select>
+        <script>document.getElementById('data').addEventListener('focus', function () {
+                this.children[0].style.display = 'none';
+            });</script>
         <input type="submit" value="Load Data">
     </form>
 
@@ -169,6 +171,59 @@
 
 
     <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 04. Time series prediction</h2>
+    <form class="container-form-predict">
+        <div class="selection-predict">
+            <div id="algorithm-selection">
+                <label style="padding-left: 50px;" for="algorithm">Choose an algorithm:</label>
+                <select id="algorithm" name="algorithm">
+                    <option value="">-- Please choose an algorithm --</option>
+                    <option value="algorithm1">VARNN</option>
+                    <option value="algorithm2">FFNN</option>
+                    <option value="algorithm3">LSTM</option>
+                    <option value="algorithm3">VAR</option>
+                    <option value="algorithm3">ARIMA</option>
+                </select>
+            </div>
+            <script>
+                document.getElementById('algorithm').addEventListener('focus', function () {
+                    this.children[0].style.display = 'none';
+                });
+            </script>
+            <div id="train-size"></div>
+            <div id="test-size"></div>s
+        </div>
+        <div class="chart">
+            <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
+        </div>
+    </form>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $.ajax({
+                url: '/model',
+                method: 'GET',
+                success: function (data) {
+                    $('#train-size').html('<h2>Train size:</h2> ' + data.train_length);
+
+                    // $('#train-data').html('<h2>Train data:</h2> ' + data.train.join(', '));
+                    $('#test-size').html('<h2>Test size:</h2> ' + data.test_length);
+                    // $('#test-data').html('<h2>Test data:</h2> ' + data.test.join(', '));
+                },
+                error: function (error) {
+                    console.error('Error:', error);
+                }
+            });
+        });
+    </script>
+
+
+
+
+
+
+
+
+
     {% endif %} <!-- Kết thúc của if load dữ liệu  -->
 </body>
 

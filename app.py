@@ -5,8 +5,14 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import datetime as dt
+from keras.models import Sequential 
+from keras.layers import Dense, LSTM 
+from sklearn.preprocessing import MinMaxScaler
 
-app = Flask(__name__)
+
+
+app = Flask(__name__) # create an app instance
 
 
 
@@ -17,6 +23,14 @@ def load_data(file_path):
     data = pd.read_csv(file_path)
     return data
 
+def scale_data(data):
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    return scaler.fit_transform(data)
+
+def split_data(data, split_ratio=0.8):
+    train_size = int(len(data) * split_ratio)
+    train, test = data[:train_size], data[train_size:]
+    return train, test 
     
 @app.route('/')
 def index():
@@ -67,8 +81,8 @@ def eda_data():
                 plt.xlabel('Date') 
             elif global_name == 'Weather_WS':
                 data_1['Date Time'] = pd.to_datetime(data_1['Date Time'])
-                plt.plot(data_1['Date'],data_1[column_name])
-                plt.xlabel('Date Time') 
+                plt.plot(data_1['Date Time'],data_1[column_name])
+                plt.xlabel('Date') 
             elif global_name == 'weather-HCM':
                 data_1['date'] = pd.to_datetime(data_1['date'])
                 plt.plot(data_1['date'],data_1[column_name])
@@ -77,3 +91,22 @@ def eda_data():
             plt.title(column_name)
             plt.savefig('static/images/plot.png')
     return jsonify(column_name=column_name)
+
+@app.route('/model', methods=['GET', 'POST'])
+def Predict():
+    global global_data 
+    global global_name
+    if global_name == 'GOOGLE' or global_name == 'APPLE' or global_name == 'AMAZON':
+        data_without_time = global_data.drop(['Date','Volume'], axis=1)
+        train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))      
+    elif global_name == 'Weather_WS':
+        data_without_time = global_data.drop('Date Time', axis=1)
+        train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+    elif global_name == 'weather-HCM':
+        data_without_time = global_data.drop(['date','wind_d'], axis=1)
+        train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+    
+    train_length = train.shape[0]
+    test_length = len(test)
+    
+    return jsonify(train=train.tolist(), test=test.tolist(), train_length=train_length, test_length=test_length)
