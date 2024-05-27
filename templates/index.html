@@ -13,8 +13,85 @@
 
 <body>
     <div class="eleven">
-        <h1>VARNN - VECTOR AUTOREGRESSIVE NEURAL NETWORK <i class="fas fa-bars" id="menu-icon"
-                style="color: #020101; font-size: 23px; cursor: pointer;;float: right;margin-top: 10px; margin-right: 40px;"></i>
+        <h1>
+            <img src="static/images/logo-design-remove.png" id="logo" title="Sync your time">
+            <script>
+                document.getElementById('logo').addEventListener('click', function () {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            </script>
+            <span id="logo-text">Time.Sync</span>
+            <div id="search-box">
+                <i class="fas fa-search" id="search-icon"></i>
+                <input type="text" id="search-input" placeholder="Search...">
+            </div>
+            <div><a href="http://example.com" target="_blank" class="my-link-page">Resoures</a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link-page">Documents</a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link-page">Report</a></div>
+            <label class="switch">
+                <span class="sun"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <g fill="#ffd43b">
+                            <circle r="5" cy="12" cx="12"></circle>
+                            <path
+                                d="m21 13h-1a1 1 0 0 1 0-2h1a1 1 0 0 1 0 2zm-17 0h-1a1 1 0 0 1 0-2h1a1 1 0 0 1 0 2zm13.66-5.66a1 1 0 0 1 -.66-.29 1 1 0 0 1 0-1.41l.71-.71a1 1 0 1 1 1.41 1.41l-.71.71a1 1 0 0 1 -.75.29zm-12.02 12.02a1 1 0 0 1 -.71-.29 1 1 0 0 1 0-1.41l.71-.66a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1 -.7.24zm6.36-14.36a1 1 0 0 1 -1-1v-1a1 1 0 0 1 2 0v1a1 1 0 0 1 -1 1zm0 17a1 1 0 0 1 -1-1v-1a1 1 0 0 1 2 0v1a1 1 0 0 1 -1 1zm-5.66-14.66a1 1 0 0 1 -.7-.29l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41 1 1 0 0 1 -.71.29zm12.02 12.02a1 1 0 0 1 -.7-.29l-.66-.71a1 1 0 0 1 1.36-1.36l.71.71a1 1 0 0 1 0 1.41 1 1 0 0 1 -.71.24z">
+                            </path>
+                        </g>
+                    </svg></span>
+                <span class="moon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                        <path
+                            d="m223.5 32c-123.5 0-223.5 100.3-223.5 224s100 224 223.5 224c60.6 0 115.5-24.2 155.8-63.4 5-4.9 6.3-12.5 3.1-18.7s-10.1-9.7-17-8.5c-9.8 1.7-19.8 2.6-30.1 2.6-96.9 0-175.5-78.8-175.5-176 0-65.8 36-123.1 89.3-153.3 6.1-3.5 9.2-10.5 7.7-17.3s-7.3-11.9-14.3-12.5c-6.3-.5-12.6-.8-19-.8z">
+                        </path>
+                    </svg></span>
+                <input type="checkbox" class="input">
+                <span class="slider"></span>
+                <script>
+                    window.onload = function () {
+                        var checkbox = document.querySelector('.input');
+                        var body = document.querySelector('body'); // Select the body
+                        var h2Elements = document.querySelectorAll('h2'); // Select all h2 elements
+                        var element = document.querySelector('.eleven');
+                        var textElements = element.querySelectorAll('h1, p, svg'); // Select all h1, p, and svg elements within .eleven
+                        var menuIcon = document.querySelector('#menu-icon'); // Select the menu icon
+                        var links = document.querySelectorAll('.my-link-page'); // Select the links
+                        var logoText = document.querySelector('#logo-text'); // Select the logo text
+
+                        checkbox.addEventListener('change', function () {
+                            if (this.checked) {
+                                body.style.backgroundColor = 'black';
+                                h2Elements.forEach(function (el) {
+                                    el.style.color = 'white';
+                                });
+                                element.style.backgroundColor = 'black';
+                                textElements.forEach(function (el) {
+                                    el.style.color = 'white';
+                                });
+                                menuIcon.style.color = 'white';
+                                links.forEach(function (link) {
+                                    link.style.color = 'white';
+                                });
+                                logoText.style.color = '#bfc07c';
+
+                            } else {
+                                body.style.backgroundColor = '';
+                                h2Elements.forEach(function (el) {
+                                    el.style.color = '';
+                                });
+                                element.style.backgroundColor = '';
+                                textElements.forEach(function (el) {
+                                    el.style.color = '';
+                                });
+                                menuIcon.style.color = '';
+                                links.forEach(function (link) {
+                                    link.style.color = '';
+                                });
+                                logoText.style.color = '';
+
+                            }
+                        });
+                    }
+                </script>
+            </label>
+            <i class="fas fa-bars" id="menu-icon"></i>
         </h1>
     </div>
     <div id="myNav" class="overlay">
@@ -60,14 +137,12 @@
         document.querySelector(".overlay-side.overlay-side-white").addEventListener("click", toggleNav);
     </script>
 
-    <!-- Cuộn lên đầu trang khi nhấn arrowUp -->
     <button onclick="topFunction()" id="Btn-arrow-up" title="Go to top">
         <i class="fa fa-arrow-up"></i>
     </button>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script>
         $(document).ready(function () {
-            // Ẩn nút khi tải trang
             $('#Btn-arrow-up').hide();
 
             $(window).scroll(function () {
@@ -85,7 +160,7 @@
         });
     </script>
 
-    <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i>01. Select Data</h2>
+    <h2 style="margin-top: 95px;">01. Select Data</h2>
     <form action="/data" method="post">
         <label for="data">Choose a dataset:</label>
         <select name="data" id="data">
@@ -99,12 +174,12 @@
         <script>document.getElementById('data').addEventListener('focus', function () {
                 this.children[0].style.display = 'none';
             });</script>
-        <input type="submit" value="Load Data">
+        <input type="submit" value="Load Data" id="loadData">
     </form>
 
 
     {% if data %}
-    <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 02. Data overview: {{stock_name}}</h2>
+    <h2>02. Data overview: {{stock_name}}</h2>
     <form action="">
         <div style="margin-bottom: 10px;font-family: 'Montserrat', sans-serif; user-select: none;"><i
                 class="fas fa-play" style="color: rgb(0, 140, 255); margin-right: 10px;"></i> Number of observations:
@@ -118,18 +193,29 @@
     </form>
 
 
-    <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 03. EDA - Exploratory Data
-        Analysis <i id="toggle-form" class="material-symbols-outlined"
+    <h2>03. EDA - Exploratory Data Analysis <i id="toggle-form" class="material-symbols-outlined"
             style="color: #3652AD; cursor: pointer; margin-left: 15px;">visibility</i>
     </h2>
     <form id="eda-form" method="POST" action="/eda_column" style="display: none;">
         <p style="font-family: 'Montserrat', sans-serif; user-select: none;" id="selected-column">Select the column:
         </p>
         <select id="column-input" name="column">
+            <option value="">-- Please choose a column --</option>
             {% for column in columns %}
             <option value="{{ column }}">{{ column }}</option>
             {% endfor %}
         </select>
+        <script>
+            document.getElementById('column-input').addEventListener('focus', function () {
+                this.children[0].style.display = 'none';
+                for (var i = 0; i < this.children.length; i++) {
+                    var child = this.children[i];
+                    if (child.value === 'date' || child.value === 'Date' || child.value === 'Date Time') {
+                        child.style.display = 'none';
+                    }
+                }
+            });
+        </script>
         <input id="visualize-button" type="submit" value="Visual">
         <div class="image-container">
             <img id="plot" src="static/images/Loading-Spinner.gif" alt="Plot">
@@ -161,7 +247,7 @@
                 var column = $("#column-input").val();
                 console.log('ten cot:', column);
                 $.post("/eda_column", { column: column }, function (data) {
-                    // Update part of the page with the returned data
+
                     $("#selected-column").text("You have selected column name: " + data.column_name);
                     $("#plot").attr("src", "/static/images/plot.png?" + new Date().getTime());
                 });
@@ -170,11 +256,11 @@
     </script>
 
 
-    <h2><i class="fas fa-ghost" style="color: #FF004D; margin-right: 10px;"></i> 04. Time series prediction</h2>
+    <h2>04. Time series prediction</h2>
     <form class="container-form-predict">
         <div class="selection-predict">
             <div id="algorithm-selection">
-                <label style="padding-left: 50px;" for="algorithm">Choose an algorithm:</label>
+                <label style="padding-left: 43px;" for="algorithm">Choose an algorithm:</label>
                 <select id="algorithm" name="algorithm">
                     <option value="">-- Please choose an algorithm --</option>
                     <option value="algorithm1">VARNN</option>
@@ -189,8 +275,25 @@
                     this.children[0].style.display = 'none';
                 });
             </script>
-            <div id="train-size"></div>
-            <div id="test-size"></div>s
+
+            <label style="padding-left: 43px; padding-right: 27px;" for="algorithm">Choose a column:</label>
+            <select id="column-prediction" name="column1">
+                <option value="">-- Please choose a column for predict --</option>
+                {% for column in columns %}
+                <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+            </select>
+            <script>
+                document.getElementById('column-prediction').addEventListener('focus', function () {
+                    this.children[0].style.display = 'none';
+                    for (var i = 0; i < this.children.length; i++) {
+                        var child = this.children[i];
+                        if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time') {
+                            child.style.display = 'none';
+                        }
+                    }
+                });
+            </script>
         </div>
         <div class="chart">
             <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
