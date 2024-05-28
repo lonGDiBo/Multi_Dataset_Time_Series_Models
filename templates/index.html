@@ -25,6 +25,15 @@
                 <i class="fas fa-search" id="search-icon"></i>
                 <input type="text" id="search-input" placeholder="Search...">
             </div>
+            <script>
+                document.getElementById('search-input').addEventListener('keypress', function (event) {
+                    if (event.key === 'Enter') {
+                        window.open('https://www.google.com/search?q=' + this.value, '_blank');
+                        this.value ='';
+                    }
+                });
+            </script>
+
             <div><a href="http://example.com" target="_blank" class="my-link-page">Resoures</a></div>
             <div><a href="http://example.com" target="_blank" class="my-link-page">Documents</a></div>
             <div><a href="http://example.com" target="_blank" class="my-link-page">Report</a></div>
@@ -94,7 +103,7 @@
             <i class="fas fa-bars" id="menu-icon"></i>
         </h1>
     </div>
- 
+
     <!-- nav right  -->
     <div id="myNav" class="overlay">
         <div class="overlay-side overlay-side-white"></div>

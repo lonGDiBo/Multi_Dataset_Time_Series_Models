@@ -84,6 +84,7 @@ label {
     background-color: rgba(206, 206, 206, 0.7);
     padding: 7px;
     border: none;
+    letter-spacing: 0.5px;
     border-radius: 5px;
     width: 300px;
 }
