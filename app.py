@@ -54,6 +54,8 @@ def data():
     if request.method == 'POST':
         if 'data' in request.form:
             stock_name = request.form['data']
+            if not stock_name:
+                  return render_template('index.html', message="Please choose a dataset"), 400 
             file_path = f"{stock_name}.csv"
             data = load_data(f"./dataset/{file_path}")
             global_data = data.copy()

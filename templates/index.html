@@ -270,6 +270,66 @@
             });</script>
         <input type="submit" value="Load Data" id="loadData">
     </form>
+    
+    {% if message %}
+    <div id="alert-load-data-error" style=" padding: 10px;">
+        <span
+            style="font-weight: bold; color: rgb(231, 231, 231);  top: 50%; transform: translateY(-50%);margin-right: 5px; font-size: 15px;">
+            <i class="fas fa-exclamation-circle"></i>
+        </span>
+        {{ message }}
+        <span id="close-alert"
+            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
+    </div>
+    <script>
+        document.getElementById('close-alert').addEventListener('click', function () {
+            this.parentElement.style.opacity = '0';
+            setTimeout(() => {
+                this.parentElement.style.display = 'none';
+            }, 1000);
+        });
+
+        setTimeout(function () {
+            var alertElement = document.getElementById('alert-load-data-error');
+            if (alertElement) {
+                alertElement.style.opacity = '0';
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, 1000);
+            }
+        }, 3000); 
+    </script>
+    {% endif %}
+
+    {% if data_loaded %}
+    <div id="alert-load-data-success" style="padding: 10px;">
+        <span
+            style="font-weight: bold; color: rgb(231, 231, 231); top: 50%; transform: translateY(-50%); margin-right: 5px; font-size: 15px;">
+            <i class="fas fa-check-circle"></i>
+        </span>
+        Loading data successful
+        <span id="close-alert-success"
+            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
+    </div>
+    <script>
+        document.getElementById('close-alert-success').addEventListener('click', function () {
+            this.parentElement.style.opacity = '0';
+            setTimeout(() => {
+                this.parentElement.style.display = 'none';
+            }, 1000);
+        });
+
+        setTimeout(function () {
+            var alertElement = document.getElementById('alert-load-data-success');
+            if (alertElement) {
+                alertElement.style.opacity = '0';
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, 1000);
+            }
+        }, 3000); 
+    </script>
+    {% endif %}
 
 
     {% if data %}
@@ -417,6 +477,11 @@
 
     {% endif %} <!-- Kết thúc của if load dữ liệu  -->
     {% include 'footer.html' %}
+    {% if data %}
+    <script>
+        $('.footer-distributed').css('margin-top', '50px');
+    </script>
+    {% endif %}
 </body>
 
 </html>
