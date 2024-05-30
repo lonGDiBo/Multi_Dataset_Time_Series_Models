@@ -113,11 +113,11 @@
             <button type="button" id="signup-button">Sign Up</button>
             <button type="button" id="signin-button">Sign In</button>
 
-            <div><a href="http://example.com" target="_blank" class="my-link">Lates News</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link">Stock Ideas</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link">Today's weather</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link">Stock Forecasts </a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link">Earnings & Revenue</a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link1">Lates News</a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link1">Stock Ideas</a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link1">Today's weather</a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link1">Stock Forecasts </a></div>
+            <div><a href="http://example.com" target="_blank" class="my-link1">Earnings & Revenue</a></div>
             <div class="social-icons">
                 <a href="https://www.facebook.com/minhlong020102" target="_blank"><i class="fab fa-facebook-f"></i></a>
                 <a href="https://www.instagram.com/khoi.iag/" target="_blank"><i class="fab fa-instagram"></i></a>
@@ -270,7 +270,7 @@
             });</script>
         <input type="submit" value="Load Data" id="loadData">
     </form>
-    
+
     {% if message %}
     <div id="alert-load-data-error" style=" padding: 10px;">
         <span
@@ -375,6 +375,7 @@
         <div class="image-container">
             <img id="plot" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
+
     </form>
     <script>
         document.getElementById('toggle-form').addEventListener('click', function () {
@@ -395,6 +396,15 @@
     </script>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-elevatezoom/3.0.8/jquery.elevatezoom.min.js"></script>
+    <div id="alert-eda-data-success" style="padding: 10px; display:none;">
+        <span
+            style="font-weight: bold; color: rgb(231, 231, 231); top: 50%; transform: translateY(-50%); margin-right: 5px; font-size: 15px;">
+            <i class="fas fa-check-circle"></i>
+        </span>
+        Successful visualization
+        <span id="close-alert-success"
+            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
+    </div>
     <script>
         $(document).ready(function () {
             $("#eda-form").submit(function (e) {
@@ -405,11 +415,22 @@
 
                     $("#selected-column").text("You have selected column name: " + data.column_name);
                     $("#plot").attr("src", "/static/images/plot.png?" + new Date().getTime());
+
+                    var alertElement = document.getElementById('alert-eda-data-success');
+                    if (alertElement) {
+                        alertElement.style.display = 'block';
+                        alertElement.style.opacity = '1';
+                        setTimeout(function () {
+                            alertElement.style.opacity = '0';
+                            setTimeout(() => {
+                                alertElement.style.display = 'none';
+                            }, 1000);
+                        }, 3000);
+                    }
                 });
             });
         });
     </script>
-
 
     <h2>04. Time series prediction</h2>
     <form class="container-form-predict">

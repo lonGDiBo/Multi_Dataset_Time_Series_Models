@@ -10,7 +10,6 @@ label {
     user-select: none;
 }
 
-
 .eleven {
     background-color: #f8f5f5;
     position: relative;
@@ -114,6 +113,11 @@ label {
     color: rgb(58, 57, 57);
     font-size: 18px;
     margin-left: 50px;
+}
+
+.my-link-page:hover {
+    text-decoration: underline !important;
+    box-shadow: 0 10px 10px rgba(110, 240, 121, 0.4)
 }
 
 .switch {
@@ -317,19 +321,21 @@ label {
 
 }
 
-.my-link {
+.my-link1 {
     text-decoration: none;
     color: white;
     margin-left: 18px;
     margin-bottom: 20px;
     display: block;
     font-family: 'Montserrat', sans-serif;
+    transition: transform 0.3s ease;
 }
 
-.my-link,
-.my-link-page:hover {
+.my-link1:hover {
     text-decoration: underline;
+    transform: scale(1.1) translateX(20px);
 }
+
 
 .social-icons a i {
     color: #ffffff;
@@ -709,7 +715,8 @@ tr:hover {
     animation: slideInDown 0.5s;
 }
 
-#alert-load-data-success {
+#alert-load-data-success,
+#alert-eda-data-success {
     position: fixed;
     top: 90px;
     right: 22px;
