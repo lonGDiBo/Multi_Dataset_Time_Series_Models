@@ -9,7 +9,8 @@ import datetime as dt
 from keras.models import Sequential 
 from keras.layers import Dense, LSTM 
 from sklearn.preprocessing import MinMaxScaler
-
+from werkzeug.utils import secure_filename
+import os
 
 
 app = Flask(__name__) # create an app instance
@@ -39,6 +40,7 @@ def index():
 global_data = None
 global_name = None
 
+
 @app.route('/data', methods=['GET', 'POST'])
 def data():
     data_loaded = False
@@ -48,25 +50,40 @@ def data():
     num_columns = None
     count_data = None
     file_path= None
+    filename = None
     
     global global_data
     global global_name
     if request.method == 'POST':
-        if 'data' in request.form:
+        if 'data' in request.form and request.form['data']:  # Check if the request has the data part
             stock_name = request.form['data']
-            if not stock_name:
-                  return render_template('index.html', message="Please choose a dataset"), 400 
-            file_path = f"{stock_name}.csv"
-            data = load_data(f"./dataset/{file_path}")
+            file_path = f"./dataset/{stock_name}.csv"
+            data = load_data(file_path)
             global_data = data.copy()
             global_name = stock_name
             count_data = data.shape[0]
             data_loaded = True   
             columns = data.columns.tolist()
             num_columns = len(columns)
+        elif 'text' in request.files and request.files['text'].filename != '':  # Check if the request has the file part
+            file = request.files['text']
+            filename = secure_filename(file.filename)
+            file_path = os.path.join('./dataset/new_dataset/', filename)
+            file.save(file_path)  # Save the file to a destination
+            data = load_data(file_path)
+            global_data = data.copy()
+            filename_without_extension = filename.split(".")[0]
+            global_name = filename_without_extension
+            count_data = data.shape[0]
+            data_loaded = True   
+            columns = data.columns.tolist()
+            num_columns = len(columns)
+        else:
+            return render_template('index.html', message="Please choose a dataset or upload a file"), 400
+        
     return render_template('index.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name,
-                           count_data=count_data,num_columns=num_columns,file_path=file_path)
-
+                           count_data=count_data,num_columns=num_columns,file_path=file_path, filename=filename, global_name=global_name)
+    
 @app.route('/eda_column', methods=['GET', 'POST'])
 def eda_data():
     global global_data  
@@ -89,7 +106,8 @@ def eda_data():
                 data_1['date'] = pd.to_datetime(data_1['date'])
                 plt.plot(data_1['date'],data_1[column_name])
                 plt.xlabel('Date')  # Add x-axis label
-
+            else:
+                plt.plot(data_1[column_name])
             plt.title(column_name)
             plt.savefig('static/images/plot.png')
     return jsonify(column_name=column_name)

@@ -255,7 +255,7 @@
     </script>
 
     <h2 style="margin-top: 95px;">01. Select Data</h2>
-    <form action="/data" method="post">
+    <form action="/data" method="post" enctype="multipart/form-data">
         <label for="data">Choose a dataset:</label>
         <select name="data" id="data">
             <option value="">-- Please choose a dataset-- </option>
@@ -280,10 +280,18 @@
         </div>
 
         <script>
+            document.getElementById('data').addEventListener('change', function () {
+                if (this.value) {
+                    document.querySelector('.file').value = '';
+                    document.getElementById("fileName").textContent = "";
+                }
+            });
+
             function updateFileName(inputElement) {
                 var fileNameElement = document.getElementById("fileName");
                 if (inputElement.files.length > 0) {
                     fileNameElement.textContent = "File uploaded successfully: " + inputElement.files[0].name;
+                    document.getElementById('data').value = '';
                 } else {
                     fileNameElement.textContent = "";
                 }
@@ -355,7 +363,7 @@
 
 
     {% if data %}
-    <h2>02. Data overview: {{stock_name}}</h2>
+    <h2>02. Data overview: {{global_name}}</h2>
     <form action="">
         <div style="margin-bottom: 10px;font-family: 'Montserrat', sans-serif; user-select: none;"><i
                 class="fas fa-play" style="color: rgb(0, 140, 255); margin-right: 10px;"></i> Number of
