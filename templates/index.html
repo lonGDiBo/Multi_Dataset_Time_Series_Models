@@ -268,6 +268,28 @@
         <script>document.getElementById('data').addEventListener('focus', function () {
                 this.children[0].style.display = 'none';
             });</script>
+
+        <p style="text-align: center; user-select: none;">or</p>
+
+        <button class="container-btn-file">
+            <i class="fas fa-file-csv" style="color: #fff; font-size: 20px; margin-right: 10px;"></i>
+            Upload File
+            <input class="file" name="text" type="file" onchange="updateFileName(this)" accept=".csv" />
+        </button>
+        <div id="fileName" style="color: black; text-align: center; width: 100%; font-size: 12px; user-select: none;">
+        </div>
+
+        <script>
+            function updateFileName(inputElement) {
+                var fileNameElement = document.getElementById("fileName");
+                if (inputElement.files.length > 0) {
+                    fileNameElement.textContent = "File uploaded successfully: " + inputElement.files[0].name;
+                } else {
+                    fileNameElement.textContent = "";
+                }
+            }
+        </script>
+
         <input type="submit" value="Load Data" id="loadData">
     </form>
 
@@ -464,7 +486,7 @@
                     this.children[0].style.display = 'none';
                     for (var i = 0; i < this.children.length; i++) {
                         var child = this.children[i];
-                        if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time') {
+                        if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time' || child.value === 'Adj Close') {
                             child.style.display = 'none';
                         }
                     }

@@ -99,7 +99,7 @@ def Predict():
     global global_data 
     global global_name
     if global_name == 'GOOGLE' or global_name == 'APPLE' or global_name == 'AMAZON':
-        data_without_time = global_data.drop(['Date','Volume'], axis=1)
+        data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
         train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))      
     elif global_name == 'Weather_WS':
         data_without_time = global_data.drop('Date Time', axis=1)
