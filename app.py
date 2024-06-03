@@ -83,7 +83,8 @@ def data():
         
     return render_template('index.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name,
                            count_data=count_data,num_columns=num_columns,file_path=file_path, filename=filename, global_name=global_name)
-    
+
+   
 @app.route('/eda_column', methods=['GET', 'POST'])
 def eda_data():
     global global_data  
@@ -113,20 +114,105 @@ def eda_data():
     return jsonify(column_name=column_name)
 
 @app.route('/model', methods=['GET', 'POST'])
-def Predict():
+def Predict_VARNN_LSTM():
     global global_data 
     global global_name
-    if global_name == 'GOOGLE' or global_name == 'APPLE' or global_name == 'AMAZON':
-        data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-        train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))      
-    elif global_name == 'Weather_WS':
-        data_without_time = global_data.drop('Date Time', axis=1)
-        train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-    elif global_name == 'weather-HCM':
-        data_without_time = global_data.drop(['date','wind_d'], axis=1)
-        train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+    algorithm =None
+    column_prediction = None
+    train = []
+    test = []
+    algorithm = request.form.get('algorithm')
+    column_prediction = request.form.get('column_prediction')
+    
+    if algorithm == 'algorithm-varnn':
+        if global_name == 'GOOGLE':
+            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        elif global_name == 'APPLE':
+            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        elif global_name == 'AMAZON':
+            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))     
+        elif global_name == 'Weather_WS':
+            data_without_time = global_data.drop('Date Time', axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        elif global_name == 'weather-HCM':
+            data_without_time = global_data.drop(['date','wind_d'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        else:
+            data_without_time = global_data.drop(['date','wind_d'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+            
+    elif algorithm == 'algorithm-lstm':
+        if global_name == 'GOOGLE':
+            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        elif global_name == 'APPLE':
+            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        elif global_name == 'AMAZON':
+            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))    
+        elif global_name == 'Weather_WS':
+            data_without_time = global_data.drop('Date Time', axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
+        elif global_name == 'weather-HCM':
+            data_without_time = global_data.drop(['date','wind_d'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))        
+        else:
+            data_without_time = global_data.drop(['date','wind_d'], axis=1)
+            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))    
+          
+    elif  algorithm == 'algorithm-ffnn':
+        if global_name == 'GOOGLE':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+        elif global_name == 'APPLE':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        elif global_name == 'AMAZON':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        elif global_name == 'Weather_WS':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+        elif global_name == 'weather-HCM':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+        else:
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+
+    elif algorithm == 'algorithm-var':
+        if global_name == 'GOOGLE':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+        elif global_name == 'APPLE':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        elif global_name == 'AMAZON':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        elif global_name == 'Weather_WS':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+        elif global_name == 'weather-HCM':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        else:
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))   
+    
+    elif algorithm == 'algorithm-arima':
+        if global_name == 'GOOGLE':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))   
+        elif global_name == 'APPLE':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        elif global_name == 'AMAZON':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1))) 
+        elif global_name == 'Weather_WS':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+        elif global_name == 'weather-HCM':
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+        else:
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+    else:
+        return render_template('index.html', message="Please choose a model"), 400
+    
     
     train_length = train.shape[0]
     test_length = len(test)
     
-    return jsonify(train=train.tolist(), test=test.tolist(), train_length=train_length, test_length=test_length)
+    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length)  
+    
+    # return jsonify(train=train.tolist(), test=test.tolist(), train_length=train_length, test_length=test_length)
+

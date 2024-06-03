@@ -483,7 +483,7 @@
             </script>
 
             <label style="padding-left: 46px; padding-right: 27px;" for="algorithm">Choose a column:</label>
-            <select id="column-prediction" name="column1">
+            <select id="column_prediction" name="column1">
                 <option value="">-- Please choose a column for predict --</option>
                 {% for column in columns %}
                 <option value="{{ column }}">{{ column }}</option>
@@ -491,7 +491,7 @@
             </select>
 
             <script>
-                document.getElementById('column-prediction').addEventListener('focus', function () {
+                document.getElementById('column_prediction').addEventListener('focus', function () {
                     this.children[0].style.display = 'none';
                     for (var i = 0; i < this.children.length; i++) {
                         var child = this.children[i];
@@ -596,11 +596,13 @@
                     var modal = document.getElementById('myModal');
                     var leftContainer = modal.querySelector('.container-choosepara .item.left');
                     var rightContainer = modal.querySelector('.container-choosepara .item.right');
+                    var half = Math.ceil(parameters.length / 2);
                     [leftContainer, rightContainer].forEach(function (container) {
                         container.querySelectorAll('.input-group').forEach(function (inputGroup) {
                             inputGroup.remove();
                         });
                     });
+
                     for (var i = 0; i < Math.min(2, parameters.length); i++) {
                         var inputGroup = createInputGroup(parameters[i]);
                         if (parameters.length === 1) {
@@ -609,7 +611,7 @@
                             leftContainer.appendChild(inputGroup);
                         }
                     }
-                    
+
                     for (var i = 2; i < parameters.length; i++) {
                         var inputGroup = createInputGroup(parameters[i]);
                         rightContainer.appendChild(inputGroup);
@@ -622,6 +624,8 @@
                         var inputGroup = createInputGroup(parameter);
                         rightContainer.appendChild(inputGroup);
                     });
+
+
                 }
 
                 function createInputGroup(parameter) {
@@ -665,28 +669,38 @@
                 <input type="submit" value="Predict" id="PredictData">
             </div>
         </div>
-
-
         <div class="chart">
             <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
     </form>
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script>
         $(document).ready(function () {
-            $.ajax({
-                url: '/model',
-                method: 'GET',
-                success: function (data) {
-                    $('#train-size').html('<h2>Train size:</h2> ' + data.train_length);
+            $('#PredictData').click(function (e) {
+                e.preventDefault(); // Prevent the form from being submitted normally
 
-                    // $('#train-data').html('<h2>Train data:</h2> ' + data.train.join(', '));
-                    $('#test-size').html('<h2>Test size:</h2> ' + data.test_length);
-                    // $('#test-data').html('<h2>Test data:</h2> ' + data.test.join(', '));
-                },
-                error: function (error) {
-                    console.error('Error:', error);
-                }
+                var algorithm = document.getElementById('algorithm').value; // Get the selected algorithm
+                var column_prediction = document.getElementById('column_prediction').value; // Get the selected column
+
+                $.ajax({
+                    url: '/model',
+                    method: 'POST',
+                    data: {
+                        'algorithm': algorithm,
+                        'column_prediction': column_prediction
+                    },
+                    success: function (data) {
+                        console.log('Algorithm:', data.algorithm);
+                        console.log('Column prediction:', data.column_prediction);
+                        console.log('Len train:', data.train_length);
+                        console.log('Len test:', data.test_length);
+
+                    },
+                    error: function (error) {
+                        console.error('Error:', error);
+                    }
+                });
             });
         });
     </script>
