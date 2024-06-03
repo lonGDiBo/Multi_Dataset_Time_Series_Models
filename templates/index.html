@@ -15,7 +15,7 @@
 <body>
     <div class="eleven">
         <h1>
-            <img src="static/images/logo-design-remove.png" id="logo" title="Sync your time">
+            <img src="static/images/logo-design-remove.png" id="logo" title="Where Time Reveals its Secrets">
             <script>
                 document.getElementById('logo').addEventListener('click', function () {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -401,7 +401,7 @@
                 }
             });
         </script>
-        <input id="visualize-button" type="submit" value="Visual">
+        <input id="visualize-button" type="submit" value="Visualize as Line Graph">
         <div class="image-container">
             <img id="plot" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
@@ -466,14 +466,14 @@
     <form class="container-form-predict">
         <div class="selection-predict">
             <div id="algorithm-selection">
-                <label style="padding-left: 43px;" for="algorithm">Choose an algorithm:</label>
+                <label style="padding-left: 46px;" for="algorithm">Choose an algorithm:</label>
                 <select id="algorithm" name="algorithm">
                     <option value="">-- Please choose an algorithm --</option>
-                    <option value="algorithm1">VARNN</option>
-                    <option value="algorithm2">FFNN</option>
-                    <option value="algorithm3">LSTM</option>
-                    <option value="algorithm3">VAR</option>
-                    <option value="algorithm3">ARIMA</option>
+                    <option value="algorithm-varnn">VARNN</option>
+                    <option value="algorithm-ffnn">FFNN</option>
+                    <option value="algorithm-lstm">LSTM</option>
+                    <option value="algorithm-var">VAR</option>
+                    <option value="algorithm-arima">ARIMA</option>
                 </select>
             </div>
             <script>
@@ -482,13 +482,14 @@
                 });
             </script>
 
-            <label style="padding-left: 43px; padding-right: 27px;" for="algorithm">Choose a column:</label>
+            <label style="padding-left: 46px; padding-right: 27px;" for="algorithm">Choose a column:</label>
             <select id="column-prediction" name="column1">
                 <option value="">-- Please choose a column for predict --</option>
                 {% for column in columns %}
                 <option value="{{ column }}">{{ column }}</option>
                 {% endfor %}
             </select>
+
             <script>
                 document.getElementById('column-prediction').addEventListener('focus', function () {
                     this.children[0].style.display = 'none';
@@ -500,7 +501,172 @@
                     }
                 });
             </script>
+
+            <span class="adjust-parameter"
+                style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 13px;color: #3652AD;"
+                onclick="toggleLabel()">Configure Options</span>
+
+            <script>
+                document.getElementById('algorithm').addEventListener('change', function () {
+                    var configOptionsSpan = document.querySelector('.adjust-parameter');
+                    if (this.value !== '') { // if an algorithm is selected
+                        configOptionsSpan.style.display = 'block';
+                    } else {
+                        configOptionsSpan.style.display = 'none';
+                    }
+                });
+            </script>
+
+            <div id="myModal" class="modal">
+                <div class="modal-content">
+                    <div class="header-adjust">
+                        <span class="close">&times;</span>
+                        <label id="parameter_title">Configure Options</label>
+                    </div>
+
+                    <div class="container-choosepara">
+                        <div class="item left">
+                            <div id="split-selection" style="display: flex; align-items: center;">
+                                <select id="split" name="splitdata" style="width: 200px; height: 45px;">
+                                    <option value="">Choose a data splitting</option>
+                                    <option value="split82">8/2</option>
+                                    <option value="split73">7/3</option>
+                                </select>
+                                <script>
+                                    document.getElementById('split').addEventListener('focus', function () {
+                                        this.children[0].style.display = 'none';
+                                    });
+                                </script>
+                            </div>
+                        </div>
+                        <div class="item right">
+                        </div>
+                    </div>
+                    <div class="button-container" style="display: flex;">
+                        <button id="resetButton" type="button">Reset</button>
+                        <button id="saveButton" type="button">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                var modal = document.getElementById("myModal");
+                var span = document.getElementsByClassName("close")[0];
+
+                function toggleLabel() {
+                    if (modal.style.display === "none" || modal.style.display === "") {
+                        modal.style.display = "block";
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        modal.style.display = "none";
+                        document.body.style.overflow = 'auto';
+                    }
+                }
+
+                span.onclick = function () {
+                    modal.style.display = "none";
+                    document.body.style.overflow = 'auto';
+                }
+
+                window.onclick = function (event) {
+                    if (event.target == modal) {
+                        modal.style.display = "none";
+                        document.body.style.overflow = 'auto';
+                    }
+                }
+            </script>
+
+            <script>
+                var algorithmParameters = {
+                    'algorithm-varnn': ['Parameter 1', 'Parameter 2', 'Parameter 3'],
+                    'algorithm-ffnn': ['Epoch', 'Batch size', 'Data window size', 'Hidden Neurons', 'Hidden Layers'],
+                    'algorithm-lstm': ['Parameter A1'],
+                    'algorithm-var': ['Parameter A12', 'Parameter B23', 'Parameter A11', 'Parameter B22'],
+                    'algorithm-arima': ['order of autoregression(p)', 'degree of differencing(d)', 'order of moving average(q)'],
+                };
+
+                document.getElementById('algorithm').addEventListener('change', function () {
+                    var algorithm = this.value;
+                    if (algorithm !== '') {
+                        updateModalParameters(algorithm);
+                    }
+                });
+                function updateModalParameters(algorithm) {
+                    var parameters = algorithmParameters[algorithm];
+                    var modal = document.getElementById('myModal');
+                    var leftContainer = modal.querySelector('.container-choosepara .item.left');
+                    var rightContainer = modal.querySelector('.container-choosepara .item.right');
+                    [leftContainer, rightContainer].forEach(function (container) {
+                        container.querySelectorAll('.input-group').forEach(function (inputGroup) {
+                            inputGroup.remove();
+                        });
+                    });
+                    for (var i = 0; i < Math.min(2, parameters.length); i++) {
+                        var inputGroup = createInputGroup(parameters[i]);
+                        if (parameters.length === 1) {
+                            rightContainer.appendChild(inputGroup);
+                        } else {
+                            leftContainer.appendChild(inputGroup);
+                        }
+                    }
+                    
+                    for (var i = 2; i < parameters.length; i++) {
+                        var inputGroup = createInputGroup(parameters[i]);
+                        rightContainer.appendChild(inputGroup);
+                    }
+                    leftParameters.forEach(function (parameter) {
+                        var inputGroup = createInputGroup(parameter);
+                        leftContainer.appendChild(inputGroup);
+                    });
+                    rightParameters.forEach(function (parameter) {
+                        var inputGroup = createInputGroup(parameter);
+                        rightContainer.appendChild(inputGroup);
+                    });
+                }
+
+                function createInputGroup(parameter) {
+                    var inputGroup = document.createElement('div');
+                    inputGroup.className = 'input-group';
+
+                    var input = document.createElement('input');
+                    input.required = true;
+                    input.type = 'text';
+                    input.name = 'text';
+                    input.autocomplete = 'off';
+                    input.className = 'input-para';
+                    inputGroup.appendChild(input);
+
+                    var label = document.createElement('label');
+                    label.className = 'user-label';
+                    label.textContent = parameter;
+                    inputGroup.appendChild(label);
+                    return inputGroup;
+                }
+            </script>
+
+
+            <script>
+                document.getElementById('resetButton').addEventListener('click', function () {
+                    var inputGroups = document.getElementsByClassName('input-group');
+                    for (var i = 0; i < inputGroups.length; i++) {
+                        var inputs = inputGroups[i].getElementsByTagName('input');
+
+                        for (var j = 0; j < inputs.length; j++) {
+                            if (inputs[j].type === 'text') {
+                                inputs[j].value = '';
+                            }
+                        }
+                    }
+                    var select = document.getElementById('split');
+                    select.selectedIndex = 0;
+                });
+            </script>
+            <div style="padding-left: 45px;margin-right: 50px;">
+                <input type="submit" value="Predict" id="PredictData">
+            </div>
         </div>
+
+
         <div class="chart">
             <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
