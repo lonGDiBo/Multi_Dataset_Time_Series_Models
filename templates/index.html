@@ -4,6 +4,7 @@
 <head>
     <title> Time series prediction | VARNN </title>
     <link rel="icon" href="static/images/logo-design.png">
+    <script src="{{ url_for('static', filename='js/parameters.js') }}"></script>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/footer.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -464,23 +465,8 @@
 
     <h2>04. Time series prediction</h2>
     <form class="container-form-predict">
+
         <div class="selection-predict">
-            <div id="algorithm-selection">
-                <label style="padding-left: 46px;" for="algorithm">Choose an algorithm:</label>
-                <select id="algorithm" name="algorithm">
-                    <option value="">-- Please choose an algorithm --</option>
-                    <option value="algorithm-varnn">VARNN</option>
-                    <option value="algorithm-ffnn">FFNN</option>
-                    <option value="algorithm-lstm">LSTM</option>
-                    <option value="algorithm-var">VAR</option>
-                    <option value="algorithm-arima">ARIMA</option>
-                </select>
-            </div>
-            <script>
-                document.getElementById('algorithm').addEventListener('focus', function () {
-                    this.children[0].style.display = 'none';
-                });
-            </script>
 
             <label style="padding-left: 46px; padding-right: 27px;" for="algorithm">Choose a column:</label>
             <select id="column_prediction" name="column1">
@@ -502,6 +488,28 @@
                 });
             </script>
 
+            <div id="algorithm-selection" style="margin-bottom: 15px;">
+                <label style="padding-left: 46px;" for="algorithm">Choose an algorithm:</label>
+                <select id="algorithm" name="algorithm">
+                    <option value="">-- Please choose an algorithm --</option>
+                    <option value="algorithm-varnn">VARNN</option>
+                    <option value="algorithm-ffnn">FFNN</option>
+                    <option value="algorithm-lstm">LSTM</option>
+                    <option value="algorithm-var">VAR</option>
+                    <option value="algorithm-arima">ARIMA</option>
+                </select>
+            </div>
+            <script>
+                document.getElementById('algorithm').addEventListener('focus', function () {
+                    this.children[0].style.display = 'none';
+                });
+            </script>
+            <div id="checkboxparam" style="display: none;">
+                <input type="checkbox" id="useExistingModel" name="useExistingModel"
+                    style="margin-left: 43px; margin-bottom: 15px;">
+                <label style="font-size: 14px;" for="useExistingModel">Applying a pre-optimized parameter model</label>
+            </div>
+            <p id='or_predict' style=" display: none ;margin-left: 70px; user-select: none;">or</p>
             <span class="adjust-parameter"
                 style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 13px;color: #3652AD;"
                 onclick="toggleLabel()">Configure Options</span>
@@ -509,10 +517,16 @@
             <script>
                 document.getElementById('algorithm').addEventListener('change', function () {
                     var configOptionsSpan = document.querySelector('.adjust-parameter');
-                    if (this.value !== '') { // if an algorithm is selected
+                    var checkboxUseParam = document.getElementById('checkboxparam');
+                    var or_predict = document.getElementById('or_predict');
+                    if (this.value !== '') {
                         configOptionsSpan.style.display = 'block';
+                        checkboxUseParam.style.display = 'block';
+                        or_predict.style.display = 'block';
                     } else {
                         configOptionsSpan.style.display = 'none';
+                        checkboxUseParam.style.display = 'none';
+                        or_predict.style.display = 'none';
                     }
                 });
             </script>
@@ -575,36 +589,37 @@
                     }
                 }
             </script>
-
             <script>
-                var algorithmParameters = {
-                    'algorithm-varnn': ['Parameter 1', 'Parameter 2', 'Parameter 3'],
-                    'algorithm-ffnn': ['Epoch', 'Batch size', 'Data window size', 'Hidden Neurons', 'Hidden Layers'],
-                    'algorithm-lstm': ['Parameter A1'],
-                    'algorithm-var': ['Parameter A12', 'Parameter B23', 'Parameter A11', 'Parameter B22'],
-                    'algorithm-arima': ['order of autoregression(p)', 'degree of differencing(d)', 'order of moving average(q)'],
-                };
+                var globalName = "{{ global_name }}";
+            </script>
+            <script>
 
                 document.getElementById('algorithm').addEventListener('change', function () {
                     var algorithm = this.value;
+                    var dataset = globalName  // Get the selected dataset
+                    var column = document.getElementById('column_prediction').value;  // Get the selected column
                     if (algorithm !== '') {
-                        updateModalParameters(algorithm);
+                        updateModalParameters(dataset, column, algorithm);
                     }
+                    console.log(dataset, column, algorithm);
                 });
-                function updateModalParameters(algorithm) {
-                    var parameters = algorithmParameters[algorithm];
+
+
+                function updateModalParameters(dataset, column, algorithm) {
+                    var parameters = algorithmParameters[dataset][column][algorithm];
                     var modal = document.getElementById('myModal');
                     var leftContainer = modal.querySelector('.container-choosepara .item.left');
                     var rightContainer = modal.querySelector('.container-choosepara .item.right');
+
                     var half = Math.ceil(parameters.length / 2);
                     [leftContainer, rightContainer].forEach(function (container) {
                         container.querySelectorAll('.input-group').forEach(function (inputGroup) {
                             inputGroup.remove();
                         });
                     });
-
                     for (var i = 0; i < Math.min(2, parameters.length); i++) {
-                        var inputGroup = createInputGroup(parameters[i]);
+                        var defaultValue = defaultValues[dataset][column][algorithm] && defaultValues[dataset][column][algorithm][parameters[i]] || '';  // Get the default value for the parameter
+                        var inputGroup = createInputGroup(parameters[i], defaultValue);
                         if (parameters.length === 1) {
                             rightContainer.appendChild(inputGroup);
                         } else {
@@ -613,31 +628,24 @@
                     }
 
                     for (var i = 2; i < parameters.length; i++) {
-                        var inputGroup = createInputGroup(parameters[i]);
+                        var defaultValue = defaultValues[dataset][column][algorithm] && defaultValues[dataset][column][algorithm][parameters[i]] || '';  // Get the default value for the parameter
+                        var inputGroup = createInputGroup(parameters[i], defaultValue);
                         rightContainer.appendChild(inputGroup);
                     }
-                    leftParameters.forEach(function (parameter) {
-                        var inputGroup = createInputGroup(parameter);
-                        leftContainer.appendChild(inputGroup);
-                    });
-                    rightParameters.forEach(function (parameter) {
-                        var inputGroup = createInputGroup(parameter);
-                        rightContainer.appendChild(inputGroup);
-                    });
-
-
                 }
 
-                function createInputGroup(parameter) {
+                var inputCount = 0;
+                function createInputGroup(parameter, defaultValue) {
                     var inputGroup = document.createElement('div');
                     inputGroup.className = 'input-group';
 
                     var input = document.createElement('input');
                     input.required = true;
                     input.type = 'text';
-                    input.name = 'text';
+                    input.name = parameter.replace(/\s+/g, '_');
                     input.autocomplete = 'off';
                     input.className = 'input-para';
+                    input.value = defaultValue;
                     inputGroup.appendChild(input);
 
                     var label = document.createElement('label');
@@ -665,9 +673,40 @@
                     select.selectedIndex = 0;
                 });
             </script>
+
+            <script>
+                document.getElementById('saveButton').addEventListener('click', function () {
+                    var parameters = {};
+                    var inputs = document.querySelectorAll('.input-para');
+                    for (var i = 0; i < inputs.length; i++) {
+                        parameters[inputs[i].name] = inputs[i].value;
+                    }
+
+                    // Send parameters to server
+                    fetch('/save_parameters', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(parameters),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Success:', data);
+                        })
+                        .catch((error) => {
+                            console.error('Error:', error);
+                        });
+                });
+            </script>
+
             <div style="padding-left: 45px;margin-right: 50px;">
                 <input type="submit" value="Predict" id="PredictData">
             </div>
+            <div id="predictionStatus"
+                style=" display:None; color: black; text-align: center; width: 100%; font-size: 13px; user-select: none; margin-top: 10px; margin-bottom: 10px">
+            </div>
+            <p id="mseDisplay" style="display: none; margin-left: 43px;"></p>
         </div>
         <div class="chart">
             <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
@@ -682,23 +721,41 @@
 
                 var algorithm = document.getElementById('algorithm').value; // Get the selected algorithm
                 var column_prediction = document.getElementById('column_prediction').value; // Get the selected column
+                var useExistingModel = document.getElementById('useExistingModel').checked ? 'on' : 'off';
+
+                // Show the prediction status and update its text
+                var predictionStatus = document.getElementById('predictionStatus');
+                var mseDisplay = document.getElementById('mseDisplay');
+                predictionStatus.style.display = 'block';
+                predictionStatus.textContent = ' Currently in the process of predicting...';
 
                 $.ajax({
                     url: '/model',
                     method: 'POST',
                     data: {
                         'algorithm': algorithm,
-                        'column_prediction': column_prediction
+                        'column_prediction': column_prediction,
+                        'useExistingModel': useExistingModel
                     },
                     success: function (data) {
                         console.log('Algorithm:', data.algorithm);
                         console.log('Column prediction:', data.column_prediction);
                         console.log('Len train:', data.train_length);
                         console.log('Len test:', data.test_length);
+                        console.log('Test score:', data.testScore_mse);
 
+                        // Update the prediction status
+                        predictionStatus.textContent = 'Successfully predicted...';
+
+                        mseDisplay.style.display = 'block';
+                        mseDisplay.textContent = 'MSE: ' + data.testScore_mse;
                     },
                     error: function (error) {
                         console.error('Error:', error);
+                        var errorMessage = error.responseJSON && error.responseJSON.error
+                            ? error.responseJSON.error
+                            : 'Failed to predict...';
+                        predictionStatus.textContent = errorMessage;
                     }
                 });
             });

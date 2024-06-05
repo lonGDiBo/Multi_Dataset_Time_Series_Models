@@ -9,8 +9,11 @@ import datetime as dt
 from keras.models import Sequential 
 from keras.layers import Dense, LSTM 
 from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
 from werkzeug.utils import secure_filename
 import os
+import numpy as np
+from sklearn.metrics import mean_squared_error
 
 
 app = Flask(__name__) # create an app instance
@@ -22,6 +25,7 @@ from flask import abort, redirect, url_for
 
 def load_data(file_path):
     data = pd.read_csv(file_path)
+    data.dropna()
     return data
 
 def scale_data(data):
@@ -32,7 +36,37 @@ def split_data(data, split_ratio=0.8):
     train_size = int(len(data) * split_ratio)
     train, test = data[:train_size], data[train_size:]
     return train, test 
-    
+
+def to_sequences(dataset,timestep , seq_size=1): 
+    x = []
+    y = []
+    for i in range(0,len(dataset)-seq_size-1,timestep):
+        window = dataset[i:(i+seq_size), 0]
+        x.append(window)
+        y.append(dataset[i+seq_size, 0])
+    return np.array(x),np.array(y)
+
+
+def model_ffnn_exist(seq_size, hidden_neurons, weights_file):
+    model = Sequential()
+    model.add(Dense(hidden_neurons, input_dim=seq_size, activation='relu'))
+    model.add(Dense(1))
+    model.compile(loss='mean_squared_error', optimizer='adam', metrics = ['acc'])
+    model.load_weights(weights_file)
+    return model
+
+def model_ffnn_new(train, test, seq_size, hidden_neurons, epoch, batchsize):
+    trainX, trainY = to_sequences(train,1, seq_size)
+    testX, testY = to_sequences(test,1, seq_size)
+    model = Sequential()
+    model.add(Dense(hidden_neurons, input_dim=seq_size, activation='relu'))
+    model.add(Dense(1))
+    model.compile(loss='mean_squared_error', optimizer='adam', metrics = ['acc'])
+    model.fit(trainX, trainY, validation_data=(testX, testY), verbose=0, epochs=epoch, batch_size=batchsize)
+    return model
+
+
+
 @app.route('/')
 def index():
     return render_template('login.html')
@@ -113,106 +147,77 @@ def eda_data():
             plt.savefig('static/images/plot.png')
     return jsonify(column_name=column_name)
 
+
 @app.route('/model', methods=['GET', 'POST'])
-def Predict_VARNN_LSTM():
+def Predict():
     global global_data 
     global global_name
     algorithm =None
     column_prediction = None
+    useExistingModel = None
     train = []
     test = []
+    testScore_mse = 0
     algorithm = request.form.get('algorithm')
     column_prediction = request.form.get('column_prediction')
-    
-    if algorithm == 'algorithm-varnn':
+    useExistingModel = request.form.get('useExistingModel') 
+    model = None
+    hidden_neurons = 0
+    seq_size = 0   
+         
+    if  algorithm == 'algorithm-ffnn':
         if global_name == 'GOOGLE':
-            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        elif global_name == 'APPLE':
-            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        elif global_name == 'AMAZON':
-            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))     
-        elif global_name == 'Weather_WS':
-            data_without_time = global_data.drop('Date Time', axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        elif global_name == 'weather-HCM':
-            data_without_time = global_data.drop(['date','wind_d'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        else:
-            data_without_time = global_data.drop(['date','wind_d'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-            
-    elif algorithm == 'algorithm-lstm':
-        if global_name == 'GOOGLE':
-            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        elif global_name == 'APPLE':
-            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        elif global_name == 'AMAZON':
-            data_without_time = global_data.drop(['Date','Volume','Adj Close'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))    
-        elif global_name == 'Weather_WS':
-            data_without_time = global_data.drop('Date Time', axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))
-        elif global_name == 'weather-HCM':
-            data_without_time = global_data.drop(['date','wind_d'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))        
-        else:
-            data_without_time = global_data.drop(['date','wind_d'], axis=1)
-            train, test = split_data(scale_data(data_without_time.values.reshape(-1,1)))    
-          
-    elif  algorithm == 'algorithm-ffnn':
-        if global_name == 'GOOGLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
         elif global_name == 'APPLE':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+            if column_prediction == 'Open':
+                default_hidden_neurons = 16
+                default_seq_size = 18
+                
+                hidden_neurons = int(global_parameters.get('Hidden_Neurons', default_hidden_neurons))
+                seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
+                
+                if useExistingModel == 'on':
+                    model_path = 'Model/Apple/1FFNN_Model_Apple_Open.h5'
+                    # if not os.path.exists(model_path):
+                    #     return jsonify(error='Model does not exist. Please choose "Configure options" instead.')
+                    model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
+                else:
+                    model = model_ffnn_new(train, test, seq_size, hidden_neurons, 400, 32)
+                    
+                x,y = to_sequences(test,1,18)
+                test_pred = model.predict(x)
+                testScore_mse = mean_squared_error(y, test_pred)
+                train_length = train.shape[0]
+                test_length = len(test)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size)  
         elif global_name == 'AMAZON':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
         elif global_name == 'Weather_WS':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
         elif global_name == 'weather-HCM':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
-        else:
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-
-    elif algorithm == 'algorithm-var':
-        if global_name == 'GOOGLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
-        elif global_name == 'APPLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-        elif global_name == 'AMAZON':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-        elif global_name == 'Weather_WS':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
-        elif global_name == 'weather-HCM':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-        else:
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))   
-    
-    elif algorithm == 'algorithm-arima':
-        if global_name == 'GOOGLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))   
-        elif global_name == 'APPLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-        elif global_name == 'AMAZON':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1))) 
-        elif global_name == 'Weather_WS':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
-        elif global_name == 'weather-HCM':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
         else:
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
     else:
         return render_template('index.html', message="Please choose a model"), 400
-    
-    
-    train_length = train.shape[0]
-    test_length = len(test)
-    
-    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length)  
-    
-    # return jsonify(train=train.tolist(), test=test.tolist(), train_length=train_length, test_length=test_length)
 
+    
+global_parameters = {}
+
+@app.route('/save_parameters', methods=['GET', 'POST'])
+def save_param():
+    global global_parameters
+    parameters = request.get_json()
+    for param_name, value in parameters.items():
+        print(f"Parameter {param_name} has value {value}")
+    global_parameters = parameters
+
+    name = global_parameters.get('name', None)
+    if name is not None:
+        print(f"The value of 'name' is {name}")
+    return jsonify({'message': 'Parameters received'}), 200
+    
+    
+if __name__ == '__main__':
+    app.run(debug=True) 
