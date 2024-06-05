@@ -500,18 +500,31 @@
                 </select>
             </div>
             <script>
+                var columnSelect = document.getElementById('column_prediction');
+                var algorithmSelect = document.getElementById('algorithm');
+                algorithmSelect.disabled = true;
+                columnSelect.addEventListener('change', function () {
+                    if (this.value !== '') {
+                        algorithmSelect.disabled = false;
+                    } else {
+                        algorithmSelect.disabled = true;
+                    }
+                });
+            </script>
+            <script>
                 document.getElementById('algorithm').addEventListener('focus', function () {
                     this.children[0].style.display = 'none';
                 });
             </script>
             <div id="checkboxparam" style="display: none;">
-                <input type="checkbox" id="useExistingModel" name="useExistingModel"
-                    style="margin-left: 43px; margin-bottom: 15px;">
+                <input type="checkbox" id="useExistingModel" name="useExistingModel" style="margin-left: 43px;">
                 <label style="font-size: 14px;" for="useExistingModel">Applying a pre-optimized parameter model</label>
             </div>
-            <p id='or_predict' style=" display: none ;margin-left: 70px; user-select: none;">or</p>
+            <p id='or_predict'
+                style=" display: none ;margin-left: 70px; margin-top: 10px;margin-bottom: 10px;  user-select: none;">or
+            </p>
             <span class="adjust-parameter"
-                style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 13px;color: #3652AD;"
+                style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 14px;color: #3652AD;"
                 onclick="toggleLabel()">Configure Options</span>
 
             <script>
@@ -593,7 +606,6 @@
                 var globalName = "{{ global_name }}";
             </script>
             <script>
-
                 document.getElementById('algorithm').addEventListener('change', function () {
                     var algorithm = this.value;
                     var dataset = globalName  // Get the selected dataset
@@ -618,8 +630,7 @@
                         });
                     });
                     for (var i = 0; i < Math.min(2, parameters.length); i++) {
-                        var defaultValue = defaultValues[dataset][column][algorithm] && defaultValues[dataset][column][algorithm][parameters[i]] || '';  // Get the default value for the parameter
-                        var inputGroup = createInputGroup(parameters[i], defaultValue);
+                        var inputGroup = createInputGroup(parameters[i]);
                         if (parameters.length === 1) {
                             rightContainer.appendChild(inputGroup);
                         } else {
@@ -628,14 +639,13 @@
                     }
 
                     for (var i = 2; i < parameters.length; i++) {
-                        var defaultValue = defaultValues[dataset][column][algorithm] && defaultValues[dataset][column][algorithm][parameters[i]] || '';  // Get the default value for the parameter
-                        var inputGroup = createInputGroup(parameters[i], defaultValue);
+                        var inputGroup = createInputGroup(parameters[i]);
                         rightContainer.appendChild(inputGroup);
                     }
                 }
 
                 var inputCount = 0;
-                function createInputGroup(parameter, defaultValue) {
+                function createInputGroup(parameter) {
                     var inputGroup = document.createElement('div');
                     inputGroup.className = 'input-group';
 
@@ -645,8 +655,12 @@
                     input.name = parameter.replace(/\s+/g, '_');
                     input.autocomplete = 'off';
                     input.className = 'input-para';
-                    input.value = defaultValue;
+                    input.title = 'Only numbers are allowed';
+                    input.addEventListener('input', function () {
+                        this.value = this.value.replace(/\D/g, '');
+                    });
                     inputGroup.appendChild(input);
+
 
                     var label = document.createElement('label');
                     label.className = 'user-label';
@@ -693,6 +707,7 @@
                         .then(response => response.json())
                         .then(data => {
                             console.log('Success:', data);
+                            document.getElementById('myModal').style.display = 'none';
                         })
                         .catch((error) => {
                             console.error('Error:', error);
@@ -744,7 +759,6 @@
                         console.log('Len test:', data.test_length);
                         console.log('Test score:', data.testScore_mse);
 
-                        // Update the prediction status
                         predictionStatus.textContent = 'Successfully predicted...';
 
                         mseDisplay.style.display = 'block';

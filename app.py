@@ -178,18 +178,19 @@ def Predict():
                 seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
                 
                 if useExistingModel == 'on':
-                    model_path = 'Model/Apple/1FFNN_Model_Apple_Open.h5'
+                    model_path = 'Model/Apple/FFNN_Model_Apple_Open.h5'
                     # if not os.path.exists(model_path):
-                    #     return jsonify(error='Model does not exist. Please choose "Configure options" instead.')
+                    #      return jsonify(error='Model does not exist. Please choose "Configure options" instead.')
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
+                    x,y = to_sequences(test,1,18)
                 else:
                     model = model_ffnn_new(train, test, seq_size, hidden_neurons, 400, 32)
+                    x,y = to_sequences(test,1,seq_size)
                     
-                x,y = to_sequences(test,1,18)
-                test_pred = model.predict(x)
-                testScore_mse = mean_squared_error(y, test_pred)
-                train_length = train.shape[0]
-                test_length = len(test)
+            test_pred = model.predict(x)
+            testScore_mse = mean_squared_error(y, test_pred)
+            train_length = train.shape[0]
+            test_length = len(test)
             return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size)  
         elif global_name == 'AMAZON':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
