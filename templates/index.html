@@ -317,7 +317,7 @@
             this.parentElement.style.opacity = '0';
             setTimeout(() => {
                 this.parentElement.style.display = 'none';
-            }, 1000);
+            }, 10);
         });
 
         setTimeout(function () {
@@ -347,7 +347,7 @@
             this.parentElement.style.opacity = '0';
             setTimeout(() => {
                 this.parentElement.style.display = 'none';
-            }, 1000);
+            }, 10);
         });
 
         setTimeout(function () {
@@ -711,7 +711,6 @@
                         parameters[inputs[i].name] = inputs[i].value;
                     }
 
-                    // Send parameters to server
                     fetch('/save_parameters', {
                         method: 'POST',
                         headers: {
@@ -723,6 +722,7 @@
                         .then(data => {
                             console.log('Success:', data);
                             document.getElementById('myModal').style.display = 'none';
+                            document.body.style.overflow = 'auto';
 
                             var alertElement = document.getElementById('alert-save-param-success');
                             if (alertElement) {
@@ -741,22 +741,7 @@
                             console.error('Error:', error);
                         });
                 });
-
-                document.getElementById('alert-save-param-success').addEventListener('click', function () {
-                    this.parentElement.style.opacity = '0';
-                    setTimeout(() => {
-                        this.parentElement.style.display = 'none';
-                    }, 1000);
-                });
-
-                document.getElementById('close-alert-save-param-failed').addEventListener('click', function () {
-                    this.parentElement.style.opacity = '0';
-                    setTimeout(() => {
-                        this.parentElement.style.display = 'none';
-                    }, 1000);
-                });
             </script>
-
             <div id="alert-save-param-success" style="padding: 10px; display:none">
                 <span
                     style="font-weight: bold; color: rgb(231, 231, 231); top: 50%; transform: translateY(-50%); margin-right: 5px; font-size: 15px;">
@@ -776,7 +761,21 @@
                 <span id="close-alert-save-param-failed"
                     style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
             </div>
+            <script>
+                document.getElementById('close-alert-save-param-success').addEventListener('click', function () {
+                    this.parentElement.style.opacity = '0';
+                    setTimeout(() => {
+                        this.parentElement.style.display = 'none';
+                    }, 10);
+                });
 
+                document.getElementById('close-alert-save-param-failed').addEventListener('click', function () {
+                    this.parentElement.style.opacity = '0';
+                    setTimeout(() => {
+                        this.parentElement.style.display = 'none';
+                    }, 10);
+                });
+            </script>
             <div style="padding-left: 45px;margin-right: 50px;">
                 <input type="submit" value="Predict" id="PredictData">
             </div>
@@ -784,6 +783,13 @@
                 style=" display:None; color: black; text-align: center; width: 100%; font-size: 13px; user-select: none; margin-top: 10px; margin-bottom: 10px">
             </div>
             <p id="mseDisplay" style="display: none; margin-left: 43px;"></p>
+
+            <p id="hd_layer" style="display: none; margin-left: 43px;"></p>
+            <p id="hd_neuron" style="display: none; margin-left: 43px;"></p>
+            <p id="data window size" style="display: none; margin-left: 43px;"></p>
+            <p id="epoch" style="display: none; margin-left: 43px;"></p>
+            <p id="batchsize" style="display: none; margin-left: 43px;"></p>
+
         </div>
         <div class="chart">
             <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
@@ -803,6 +809,12 @@
                 // Show the prediction status and update its text
                 var predictionStatus = document.getElementById('predictionStatus');
                 var mseDisplay = document.getElementById('mseDisplay');
+                var hd_layerdisplay = document.getElementById('hd_layer');
+                var hd_neurondisplay = document.getElementById('hd_neuron');
+                var data_window_size = document.getElementById('data window size');
+                var epoch = document.getElementById('epoch');
+                var batchsize = document.getElementById('batchsize');
+
                 predictionStatus.style.display = 'block';
                 predictionStatus.textContent = ' Currently in the process of predicting...';
 
@@ -825,6 +837,22 @@
 
                         mseDisplay.style.display = 'block';
                         mseDisplay.textContent = 'MSE: ' + data.testScore_mse;
+
+                        hd_layerdisplay.style.display = 'block';
+                        hd_layerdisplay.textContent = 'Hidden Layer: ' + data.hidden_layers;
+
+                        hd_neurondisplay.style.display = 'block';
+                        hd_neurondisplay.textContent = 'Hidden Neuron: ' + data.hidden_neurons;
+
+                        data_window_size.style.display = 'block';
+                        data_window_size.textContent = 'Data Window Size: ' + data.seq_size;
+
+                        epoch.style.display = 'block';
+                        epoch.textContent = 'Epoch: ' + data.epochs;
+
+                        batchsize.style.display = 'block';
+                        batchsize.textContent = 'Batch Size: ' + data.batch_sizes;
+
                     },
                     error: function (error) {
                         console.error('Error:', error);

@@ -66,6 +66,13 @@ def model_ffnn_new(train, test, hidden_layers, seq_size, hidden_neurons, epoch, 
     model.fit(trainX, trainY, validation_data=(testX, testY), verbose=0, epochs=epoch, batch_size=batchsize)
     return model
 
+def get_param_ffnn(default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers):
+   hidden_neurons = int(global_parameters.get('Hidden_Neurons', default_hidden_neurons))
+   seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
+   epochs = int(global_parameters.get('Epoch', default_epochs))
+   batch_sizes = int(global_parameters.get('Batch_size', default_batch_size))
+   hidden_layers = int(global_parameters.get('Hidden_Layers', default_hidden_layers))
+   return hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
 
 
 @app.route('/')
@@ -164,37 +171,37 @@ def Predict():
     useExistingModel = request.form.get('useExistingModel') 
     model = None
             
-    if  algorithm == 'algorithm-ffnn':
-        default_hidden_layers = 1
-        default_hidden_neurons = 16
-        default_seq_size = 18
-        default_epochs = 400
-        default_batch_size = 32
-        
-        hidden_neurons = int(global_parameters.get('Hidden_Neurons', default_hidden_neurons))
-        seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
-        epochs = int(global_parameters.get('Epoch', default_epochs))
-        batch_sizes = int(global_parameters.get('Batch size', default_batch_size))
-        hidden_layers = int(global_parameters.get('Hidden Layers', default_hidden_layers))
-        
+    if  algorithm == 'algorithm-ffnn':        
         if global_name == 'GOOGLE':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
         elif global_name == 'APPLE':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-            if column_prediction == 'Open':                
+            if column_prediction == 'Open': 
+                default_hidden_layers = 1
+                default_hidden_neurons = 16
+                default_seq_size = 18
+                default_epochs = 400
+                default_batch_size = 32
+                hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
                 if useExistingModel == 'on':
                     model_path = 'Model/Apple/FFNN_Model_Apple_Open.h5'
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
                     x,y = to_sequences(test,1,18)
+                    
+                    test_pred = model.predict(x)
+                    testScore_mse = mean_squared_error(y, test_pred)
+                    train_length = train.shape[0]
+                    test_length = len(test)
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size)                      
                 else:
                     model = model_ffnn_new(train, test,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
                     x,y = to_sequences(test,1,seq_size)
                     
-            test_pred = model.predict(x)
-            testScore_mse = mean_squared_error(y, test_pred)
-            train_length = train.shape[0]
-            test_length = len(test)
-            return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size)  
+                    test_pred = model.predict(x)
+                    testScore_mse = mean_squared_error(y, test_pred)
+                    train_length = train.shape[0]
+                    test_length = len(test)
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes)  
         elif global_name == 'AMAZON':
             train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
         elif global_name == 'Weather_WS':
