@@ -693,6 +693,21 @@
                     var parameters = {};
                     var inputs = document.querySelectorAll('.input-para');
                     for (var i = 0; i < inputs.length; i++) {
+                        if (inputs[i].value === '') {
+                            var alertElement = document.getElementById('alert-save-param-failed');
+                            if (alertElement) {
+                                alertElement.style.display = 'block';
+                                alertElement.style.opacity = '1';
+                                setTimeout(function () {
+                                    alertElement.style.opacity = '0';
+                                    setTimeout(() => {
+                                        alertElement.style.display = 'none';
+                                    }, 1000);
+                                }, 3000);
+                            }
+                            return;
+                        }
+
                         parameters[inputs[i].name] = inputs[i].value;
                     }
 
@@ -726,7 +741,15 @@
                             console.error('Error:', error);
                         });
                 });
+
                 document.getElementById('alert-save-param-success').addEventListener('click', function () {
+                    this.parentElement.style.opacity = '0';
+                    setTimeout(() => {
+                        this.parentElement.style.display = 'none';
+                    }, 1000);
+                });
+
+                document.getElementById('close-alert-save-param-failed').addEventListener('click', function () {
                     this.parentElement.style.opacity = '0';
                     setTimeout(() => {
                         this.parentElement.style.display = 'none';
@@ -740,10 +763,19 @@
                     <i class="fas fa-check-circle"></i>
                 </span>
                 Model parameters saved
-                <span id="close-alert-success"
+                <span id="close-alert-save-param-success"
                     style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
             </div>
 
+            <div id="alert-save-param-failed" style="padding: 10px; display:none">
+                <span
+                    style="font-weight: bold; color: rgb(231, 231, 231); top: 50%; transform: translateY(-50%); margin-right: 5px; font-size: 15px;">
+                    <i class="fas fa-check-circle"></i>
+                </span>
+                Please fill all the fields
+                <span id="close-alert-save-param-failed"
+                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
+            </div>
 
             <div style="padding-left: 45px;margin-right: 50px;">
                 <input type="submit" value="Predict" id="PredictData">
