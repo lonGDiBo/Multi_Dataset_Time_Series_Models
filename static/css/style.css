@@ -931,6 +931,7 @@ tr:hover {
 }
 
 #alert-load-data-success,
+#alert-save-param-success,
 #alert-eda-data-success {
     position: fixed;
     top: 90px;

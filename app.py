@@ -173,18 +173,18 @@ def Predict():
             if column_prediction == 'Open':
                 default_hidden_neurons = 16
                 default_seq_size = 18
+                default_epochs = 400
+                default_batch_size = 32
                 
                 hidden_neurons = int(global_parameters.get('Hidden_Neurons', default_hidden_neurons))
                 seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
                 
                 if useExistingModel == 'on':
                     model_path = 'Model/Apple/FFNN_Model_Apple_Open.h5'
-                    # if not os.path.exists(model_path):
-                    #      return jsonify(error='Model does not exist. Please choose "Configure options" instead.')
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
                     x,y = to_sequences(test,1,18)
                 else:
-                    model = model_ffnn_new(train, test, seq_size, hidden_neurons, 400, 32)
+                    model = model_ffnn_new(train, test, seq_size, hidden_neurons, default_epochs, default_batch_size)
                     x,y = to_sequences(test,1,seq_size)
                     
             test_pred = model.predict(x)
