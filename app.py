@@ -1,7 +1,8 @@
 from flask import Flask
 from flask import *
-from markupsafe import escape
+import numpy as np
 import pandas as pd
+from markupsafe import escape
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -12,7 +13,6 @@ from sklearn.preprocessing import MinMaxScaler
 import tensorflow as tf
 from werkzeug.utils import secure_filename
 import os
-import numpy as np
 from sklearn.metrics import mean_squared_error
 
 
@@ -32,10 +32,15 @@ def scale_data(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
     return scaler.fit_transform(data)
 
-def split_data(data, split_ratio=0.8):
+def split_data_default(data, split_ratio=0.8):
     train_size = int(len(data) * split_ratio)
     train, test = data[:train_size], data[train_size:]
     return train, test 
+
+def split_data_new(data, split_ratio):
+    train_size = int(len(data) * split_ratio)
+    train, test = data[:train_size], data[train_size:]
+    return train, test
 
 def to_sequences(dataset,timestep , seq_size=1): 
     x = []
@@ -66,13 +71,18 @@ def model_ffnn_new(train, test, hidden_layers, seq_size, hidden_neurons, epoch, 
     model.fit(trainX, trainY, validation_data=(testX, testY), verbose=0, epochs=epoch, batch_size=batchsize)
     return model
 
-def get_param_ffnn(default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers):
+def get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers):
+   split_ratio_get = global_parameters.get('splitdata',default_split_ratio)
+   if split_ratio_get == 'split73':
+       split_ratio = 0.7
+   else:
+       split_ratio = 0.8
    hidden_neurons = int(global_parameters.get('Hidden_Neurons', default_hidden_neurons))
    seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
    epochs = int(global_parameters.get('Epoch', default_epochs))
    batch_sizes = int(global_parameters.get('Batch_size', default_batch_size))
    hidden_layers = int(global_parameters.get('Hidden_Layers', default_hidden_layers))
-   return hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
+   return split_ratio, hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
 
 
 @app.route('/')
@@ -173,43 +183,58 @@ def Predict():
             
     if  algorithm == 'algorithm-ffnn':        
         if global_name == 'GOOGLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
         elif global_name == 'APPLE':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
             if column_prediction == 'Open': 
+                # Default parameters
                 default_hidden_layers = 1
                 default_hidden_neurons = 16
                 default_seq_size = 18
                 default_epochs = 400
                 default_batch_size = 32
-                hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
+                default_split_ratio = 0.8
+                # Get parameters
+                split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
+                # Check if the user wants to use an existing model
                 if useExistingModel == 'on':
                     model_path = 'Model/Apple/FFNN_Model_Apple_Open.h5'
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
                     x,y = to_sequences(test,1,18)
-                    
                     test_pred = model.predict(x)
                     testScore_mse = mean_squared_error(y, test_pred)
                     train_length = train.shape[0]
                     test_length = len(test)
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size)                      
-                else:
-                    model = model_ffnn_new(train, test,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
-                    x,y = to_sequences(test,1,seq_size)
-                    
+                    plt.clf() 
+                    plt.plot(y,label="Actual value")
+                    plt.plot(test_pred,label="Predicted value")
+                    plt.legend()
+                    plt.savefig('static/images/plot_predict.png')
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
+                else: # Train a new model
+                    if split_ratio == 0.7:
+                        train_new, test_new = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio)
+                        model = model_ffnn_new(train_new, test_new,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
+                        x,y = to_sequences(test_new,1,seq_size)      
+                    else: 
+                        model = model_ffnn_new(train, test,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
+                        x,y = to_sequences(test,1,seq_size) 
                     test_pred = model.predict(x)
                     testScore_mse = mean_squared_error(y, test_pred)
-                    train_length = train.shape[0]
-                    test_length = len(test)
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes)  
+                    plt.clf() 
+                    plt.plot(y,label="Actual value")
+                    plt.plot(test_pred,label="Predicted value")
+                    plt.legend()
+                    plt.savefig('static/images/plot_predict.png')
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes, split_ratio=split_ratio)  
         elif global_name == 'AMAZON':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
         elif global_name == 'Weather_WS':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
         elif global_name == 'weather-HCM':
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
         else:
-            train, test = split_data(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))       
     else:
         return render_template('index.html', message="Please choose a model"), 400
 

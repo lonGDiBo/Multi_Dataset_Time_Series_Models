@@ -530,6 +530,7 @@ tr:hover {
 /* 4 - Predict */
 .container-form-predict {
     display: flex;
+
 }
 
 .selection-predict,
@@ -537,9 +538,13 @@ tr:hover {
     width: 50%;
 }
 
+.chart {
+    height: 400px;
+    margin: auto;
+}
+
 .selection-predict {
     background-color: #f0f0f0;
-    /* Light gray */
 }
 
 .chart {

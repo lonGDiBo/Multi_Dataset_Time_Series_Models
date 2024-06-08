@@ -691,6 +691,23 @@
             <script>
                 document.getElementById('saveButton').addEventListener('click', function () {
                     var parameters = {};
+
+                    var splitSelection = document.getElementById('split');
+                    parameters[splitSelection.name] = splitSelection.value;
+                    if (splitSelection.value === '') {
+                        var alertElement = document.getElementById('alert-save-param-failed');
+                        if (alertElement) {
+                            alertElement.style.display = 'block';
+                            alertElement.style.opacity = '1';
+                            setTimeout(function () {
+                                alertElement.style.opacity = '0';
+                                setTimeout(() => {
+                                    alertElement.style.display = 'none';
+                                }, 1000);
+                            }, 3000);
+                        }
+                        return;
+                    }
                     var inputs = document.querySelectorAll('.input-para');
                     for (var i = 0; i < inputs.length; i++) {
                         if (inputs[i].value === '') {
@@ -789,10 +806,10 @@
             <p id="data window size" style="display: none; margin-left: 43px;"></p>
             <p id="epoch" style="display: none; margin-left: 43px;"></p>
             <p id="batchsize" style="display: none; margin-left: 43px;"></p>
-
+            <p id="split-ratio" style="display: none; margin-left: 43px;"></p>
         </div>
         <div class="chart">
-            <img id="plot1" src="static/images/Loading-Spinner.gif" alt="Plot">
+            <img id="plot-predict" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
     </form>
 
@@ -814,7 +831,7 @@
                 var data_window_size = document.getElementById('data window size');
                 var epoch = document.getElementById('epoch');
                 var batchsize = document.getElementById('batchsize');
-
+                var split_ratio = document.getElementById('split-ratio');
                 predictionStatus.style.display = 'block';
                 predictionStatus.textContent = ' Currently in the process of predicting...';
 
@@ -829,10 +846,6 @@
                     success: function (data) {
                         console.log('Algorithm:', data.algorithm);
                         console.log('Column prediction:', data.column_prediction);
-                        console.log('Len train:', data.train_length);
-                        console.log('Len test:', data.test_length);
-                        console.log('Test score:', data.testScore_mse);
-
                         predictionStatus.textContent = 'Successfully predicted...';
 
                         mseDisplay.style.display = 'block';
@@ -853,6 +866,9 @@
                         batchsize.style.display = 'block';
                         batchsize.textContent = 'Batch Size: ' + data.batch_sizes;
 
+                        split_ratio.style.display = 'block';
+                        split_ratio.textContent = 'Split Ratio: ' + data.split_ratio;
+                        $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
                     },
                     error: function (error) {
                         console.error('Error:', error);
