@@ -481,7 +481,8 @@
                     this.children[0].style.display = 'none';
                     for (var i = 0; i < this.children.length; i++) {
                         var child = this.children[i];
-                        if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time' || child.value === 'Adj Close') {
+                        // if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time' || child.value === 'Adj Close') {
+                        if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time') {
                             child.style.display = 'none';
                         }
                     }
@@ -869,6 +870,7 @@
                         split_ratio.style.display = 'block';
                         split_ratio.textContent = 'Split Ratio: ' + data.split_ratio;
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
+
                     },
                     error: function (error) {
                         console.error('Error:', error);

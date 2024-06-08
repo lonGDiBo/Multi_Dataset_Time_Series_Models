@@ -51,6 +51,25 @@ def to_sequences(dataset,timestep , seq_size=1):
         y.append(dataset[i+seq_size, 0])
     return np.array(x),np.array(y)
 
+def to_sequences_multivariate_varnn(dataset,p):
+    x = []
+    y = []
+    for i in range(p, len(dataset)):
+        x.append(dataset[i - p:i, 0:dataset.shape[1]])
+        y.append(dataset[i:i + 1, 0:dataset.shape[1]])
+    x = np.array(x)
+    y = np.array(y)
+    return x,y.reshape(y.shape[0], y.shape[2])
+
+def to_sequences_multivariate_lstm(dataset,p):
+    x = []
+    y = []
+    for i in range(p, len(dataset)):
+        x.append(dataset[i - p:i, 0:dataset.shape[1]])
+        y.append(dataset[i:i + 1, 0:dataset.shape[1]])
+    x = np.array(x)
+    y = np.array(y)
+    return x.reshape(x.shape[0], x.shape[1] * x.shape[2]),y.reshape(y.shape[0], y.shape[2])
 
 def model_ffnn_exist(seq_size, hidden_neurons, weights_file):
     model = Sequential()
@@ -166,6 +185,7 @@ def eda_data():
     return jsonify(column_name=column_name)
 
 
+
 @app.route('/model', methods=['GET', 'POST'])
 def Predict():
     global global_data 
@@ -176,6 +196,7 @@ def Predict():
     train = []
     test = []
     testScore_mse = 0
+    model_path_ffnn = 'Model/Apple/FFNN/'
     algorithm = request.form.get('algorithm')
     column_prediction = request.form.get('column_prediction')
     useExistingModel = request.form.get('useExistingModel') 
@@ -198,7 +219,7 @@ def Predict():
                 split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
                 # Check if the user wants to use an existing model
                 if useExistingModel == 'on':
-                    model_path = 'Model/Apple/FFNN_Model_Apple_Open.h5'
+                    model_path = model_path_ffnn + 'FFNN_Model_Apple_Open.h5'
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
                     x,y = to_sequences(test,1,18)
                     test_pred = model.predict(x)
