@@ -1,9 +1,17 @@
-var varnnParameters = ['Parameter 1', 'Parameter 2', 'Parameter 3'];
+
+var varnnParameters = ['Epoch', 'Batch size', 'p', 'Hidden Neurons'];;
 var ffnnParameters = ['Epoch', 'Batch size', 'Data window size', 'Hidden Neurons', 'Hidden Layers'];
 var lstmParameters = ['Epoch', 'Batch size', 'Data window size', 'Hidden Neurons', 'Hidden Layers'];
-var varParameters = ['Parameter A12', 'Parameter B23', 'Parameter A11', 'Parameter B22'];
-var arimaParameters = ['order of autoregression(p)', 'degree of differencing(d)', 'order of moving average(q)'];
+var varParameters = ['Max lag order(p)',];
+var arimaParameters = ['Autoregressive order (p)', 'Differencing order (d)', 'Moving average order (q)'];
 
+var defaultParameters = {
+    'algorithm-varnn': varnnParameters,
+    'algorithm-ffnn': ffnnParameters,
+    'algorithm-lstm': lstmParameters,
+    'algorithm-var': varParameters,
+    'algorithm-arima': arimaParameters,
+};
 
 function createAlgorithmParameters() {
     return {

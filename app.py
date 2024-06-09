@@ -13,7 +13,7 @@ from sklearn.preprocessing import MinMaxScaler
 import tensorflow as tf
 from werkzeug.utils import secure_filename
 import os
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error,mean_absolute_error
 
 
 app = Flask(__name__) # create an app instance
@@ -103,6 +103,35 @@ def get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,d
    hidden_layers = int(global_parameters.get('Hidden_Layers', default_hidden_layers))
    return split_ratio, hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
 
+def get_param_ffnn_datasetNew():
+   split_ratio_get = global_parameters.get('splitdata')
+   if split_ratio_get == 'split73':
+       split_ratio = 0.7
+   else:
+       split_ratio = 0.8
+   hidden_neurons = int(global_parameters.get('Hidden_Neurons'))
+   seq_size = int(global_parameters.get('Data_window_size'))
+   epochs = int(global_parameters.get('Epoch'))
+   batch_sizes = int(global_parameters.get('Batch_size'))
+   hidden_layers = int(global_parameters.get('Hidden_Layers'))
+   return split_ratio, hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
+
+
+def LSTM_exist(train,test,outputs,seq,hidden_neural,weights_file):
+    seq_size = seq
+    trainX_LSTM, trainY_LSTM = to_sequences_multivariate_lstm(train,seq_size)
+    model_LSTM = Sequential()
+    model_LSTM.add(LSTM(hidden_neural, return_sequences=False, input_shape= (trainX_LSTM.shape[1], 1)))
+    model_LSTM.add(Dense(outputs))
+    model_LSTM.compile(loss='mean_squared_error', optimizer='adam', metrics = ['acc'])
+    model_LSTM.load_weights(weights_file)
+    return model_LSTM
+
+def calculate_metrics_Standardization(test, predictions):
+    mse = mean_squared_error(test, predictions)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(test, predictions)
+    return mse, rmse, mae
 
 @app.route('/')
 def index():
@@ -197,6 +226,7 @@ def Predict():
     test = []
     testScore_mse = 0
     model_path_ffnn = 'Model/Apple/FFNN/'
+    model_path_lstm = 'Model/Apple/LSTM/'
     algorithm = request.form.get('algorithm')
     column_prediction = request.form.get('column_prediction')
     useExistingModel = request.form.get('useExistingModel') 
@@ -206,15 +236,15 @@ def Predict():
         if global_name == 'GOOGLE':
             train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
         elif global_name == 'APPLE':
+            default_hidden_layers = 1
+            default_split_ratio = 0.8
             train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
             if column_prediction == 'Open': 
                 # Default parameters
-                default_hidden_layers = 1
                 default_hidden_neurons = 16
                 default_seq_size = 18
                 default_epochs = 400
-                default_batch_size = 32
-                default_split_ratio = 0.8
+                default_batch_size = 32                
                 # Get parameters
                 split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
                 # Check if the user wants to use an existing model
@@ -223,39 +253,68 @@ def Predict():
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
                     x,y = to_sequences(test,1,18)
                     test_pred = model.predict(x)
-                    testScore_mse = mean_squared_error(y, test_pred)
-                    train_length = train.shape[0]
-                    test_length = len(test)
+                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
                     plt.clf() 
                     plt.plot(y,label="Actual value")
                     plt.plot(test_pred,label="Predicted value")
                     plt.legend()
                     plt.savefig('static/images/plot_predict.png')
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, train_length=train_length, test_length=test_length, testScore_mse=testScore_mse, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse = testScore_rmse,testScore_mae = testScore_mae, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
                 else: # Train a new model
-                    if split_ratio == 0.7:
-                        train_new, test_new = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio)
-                        model = model_ffnn_new(train_new, test_new,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
-                        x,y = to_sequences(test_new,1,seq_size)      
-                    else: 
-                        model = model_ffnn_new(train, test,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
-                        x,y = to_sequences(test,1,seq_size) 
+                    train_new, test_new = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio)
+                    model = model_ffnn_new(train_new, test_new,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
+                    x,y = to_sequences(test_new,1,seq_size)      
                     test_pred = model.predict(x)
-                    testScore_mse = mean_squared_error(y, test_pred)
+                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
                     plt.clf() 
                     plt.plot(y,label="Actual value")
                     plt.plot(test_pred,label="Predicted value")
                     plt.legend()
                     plt.savefig('static/images/plot_predict.png')
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes, split_ratio=split_ratio)  
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse = testScore_rmse,testScore_mae = testScore_mae, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes, split_ratio=split_ratio)  
         elif global_name == 'AMAZON':
             train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
         elif global_name == 'Weather_WS':
             train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
         elif global_name == 'weather-HCM':
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))     
+        else: # For new dataset
+            split_ratio_new,hidden_neurons_new,seq_size_new,epochs_new,batch_sizes_new,hidden_layers_new = get_param_ffnn_datasetNew()            
+            train_datanew, test_datanew = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio_new)
+            model = model_ffnn_new(train_datanew, test_datanew,hidden_layers_new, seq_size_new, hidden_neurons_new, epochs_new, batch_sizes_new)
+            x,y = to_sequences(test_datanew,1,seq_size_new)      
+            test_pred = model.predict(x)
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
+            plt.clf() 
+            plt.plot(y,label="Actual value")
+            plt.plot(test_pred,label="Predicted value")
+            plt.legend()
+            plt.savefig('static/images/plot_predict.png')
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,hidden_neurons=hidden_neurons_new, seq_size=seq_size_new, hidden_layers=hidden_layers_new, epochs=epochs_new, batch_sizes=batch_sizes_new, split_ratio=split_ratio_new)     
+    elif algorithm == 'algorithm-lstm':
+        array_stock = list(["Open","High","Low","Close","Adj Close"])
+        if global_name == 'APPLE':
+            seq_size_lstm = 12
+            hidden_neurons_lstm = 5
+            output_lstm = 5
+            model_path_lstm = model_path_lstm + 'LSTM_APPLE.h5'
+            train, test = split_data_default(scale_data(global_data[array_stock]))              
+            model_lstm = LSTM_exist(train, test, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
+            testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
+            result_LSTM = model_lstm.predict(testX_LSTM) 
+            if column_prediction == 'Open':
+                if useExistingModel == 'on':                  
+                    predict_LSTM_Open = result_LSTM[:,array_stock.index('Open')]
+                    textY_LSTM_Open = testY_LSTM[:,array_stock.index('Open')]  
+                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Open, predict_LSTM_Open)
+                    plt.clf() 
+                    plt.plot(textY_LSTM_Open,label="Actual value")
+                    plt.plot(predict_LSTM_Open,label="Predicted value")
+                    plt.legend()
+                    plt.savefig('static/images/plot_predict.png')
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)                 
         else:
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))       
+            return render_template('index.html', message="Please choose a model"), 400
     else:
         return render_template('index.html', message="Please choose a model"), 400
 
