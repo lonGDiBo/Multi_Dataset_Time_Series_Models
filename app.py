@@ -25,8 +25,15 @@ from flask import abort, redirect, url_for
 
 def load_data(file_path):
     data = pd.read_csv(file_path)
-    data.dropna()
+    # data.dropna()
     return data
+
+def load_data_new(file_path):
+    data = pd.read_csv(file_path)
+    data.dropna()
+    df_numerical = data.select_dtypes(include=[float, int])
+    df_final= df_numerical.dropna(axis=1)
+    return df_final
 
 def scale_data(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -37,6 +44,7 @@ def split_data_default(data, split_ratio=0.8):
     train, test = data[:train_size], data[train_size:]
     return train, test 
 
+
 def split_data_new(data, split_ratio):
     train_size = int(len(data) * split_ratio)
     train, test = data[:train_size], data[train_size:]
@@ -45,7 +53,17 @@ def split_data_new(data, split_ratio):
 def to_sequences(dataset,timestep , seq_size=1): 
     x = []
     y = []
-    for i in range(0,len(dataset)-seq_size-1,timestep):
+    for i in range(0,len(dataset)-seq_size,timestep):
+        window = dataset[i:(i+seq_size), 0]
+        x.append(window)
+        y.append(dataset[i+seq_size, 0])
+    return np.array(x),np.array(y)
+
+def to_sequences(dataset,timestep , seq_size=1):
+    x = []
+    y = []
+    for i in range(0,len(dataset)-seq_size,timestep):
+        #print(i)
         window = dataset[i:(i+seq_size), 0]
         x.append(window)
         y.append(dataset[i+seq_size, 0])
@@ -71,6 +89,7 @@ def to_sequences_multivariate_lstm(dataset,p):
     y = np.array(y)
     return x.reshape(x.shape[0], x.shape[1] * x.shape[2]),y.reshape(y.shape[0], y.shape[2])
 
+# ----------------------------------START FFNN ----------------------------------
 def model_ffnn_exist(seq_size, hidden_neurons, weights_file):
     model = Sequential()
     model.add(Dense(hidden_neurons, input_dim=seq_size, activation='relu'))
@@ -115,9 +134,9 @@ def get_param_ffnn_datasetNew():
    batch_sizes = int(global_parameters.get('Batch_size'))
    hidden_layers = int(global_parameters.get('Hidden_Layers'))
    return split_ratio, hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
-
-
-def LSTM_exist(train,test,outputs,seq,hidden_neural,weights_file):
+# ---------------------------------- END FFNN ----------------------------------
+# ---------------------------------- LSTM ----------------------------------
+def LSTM_exist(train,outputs,seq,hidden_neural,weights_file):
     seq_size = seq
     trainX_LSTM, trainY_LSTM = to_sequences_multivariate_lstm(train,seq_size)
     model_LSTM = Sequential()
@@ -127,11 +146,42 @@ def LSTM_exist(train,test,outputs,seq,hidden_neural,weights_file):
     model_LSTM.load_weights(weights_file)
     return model_LSTM
 
+def LSTM_new( train,test,outputs,seq,hidden_neural,epochs,batch_size,hidden_layers):
+    seq_size = seq
+    trainX_LSTM, trainY_LSTM = to_sequences_multivariate_lstm(train,seq_size)
+    testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size)
+    model_LSTM = Sequential()
+    for j in range(1, hidden_layers+1):
+         model_LSTM.add(LSTM(hidden_neural, return_sequences=False, input_shape= (trainX_LSTM.shape[1], 1)))
+    model_LSTM.add(Dense(outputs))
+    model_LSTM.compile(loss='mean_squared_error', optimizer='adam', metrics = ['acc'])
+    model_LSTM.fit(trainX_LSTM, trainY_LSTM, validation_data=(testX_LSTM, testY_LSTM), verbose=0, epochs=epochs, batch_size=batch_size)
+    return model_LSTM
+
+
+
 def calculate_metrics_Standardization(test, predictions):
     mse = mean_squared_error(test, predictions)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(test, predictions)
     return mse, rmse, mae
+
+def eda_model_FFNN(y,test_pred,column_prediction):
+    plt.clf() 
+    plt.plot(y,label="Actual value")
+    plt.plot(test_pred,label="Predicted value")
+    plt.title('FFNN Predictions of {} Values Compared to Actuals'.format(column_prediction))
+    plt.legend()
+    plt.savefig('static/images/plot_predict.png')
+
+def eda_model_LSTM(y,predict_LSTM_Open,column_prediction):
+    plt.clf() 
+    plt.plot(y,label="Actual value")
+    plt.plot(predict_LSTM_Open,label="Predicted value")
+    plt.title('LSTM Predictions of {} Values Compared to Actuals'.format(column_prediction))
+    plt.legend()
+    plt.savefig('static/images/plot_predict.png')
+    
 
 @app.route('/')
 def index():
@@ -150,8 +200,9 @@ def data():
     num_columns = None
     count_data = None
     file_path= None
+    data_out = None
     filename = None
-    
+    output_columns = None
     global global_data
     global global_name
     if request.method == 'POST':
@@ -162,7 +213,8 @@ def data():
             global_data = data.copy()
             global_name = stock_name
             count_data = data.shape[0]
-            data_loaded = True   
+            data_loaded = True  
+            
             columns = data.columns.tolist()
             num_columns = len(columns)
         elif 'text' in request.files and request.files['text'].filename != '':  # Check if the request has the file part
@@ -175,14 +227,18 @@ def data():
             filename_without_extension = filename.split(".")[0]
             global_name = filename_without_extension
             count_data = data.shape[0]
-            data_loaded = True   
+            data_loaded = True
+            
+            data_out = load_data_new(file_path)
+            output_columns = data_out.columns.tolist()   
+            
             columns = data.columns.tolist()
             num_columns = len(columns)
         else:
             return render_template('index.html', message="Please choose a dataset or upload a file"), 400
         
     return render_template('index.html', data=data.to_html() if data is not None else None, data_loaded=data_loaded,columns = columns,stock_name=stock_name,
-                           count_data=count_data,num_columns=num_columns,file_path=file_path, filename=filename, global_name=global_name)
+                           count_data=count_data,num_columns=num_columns,file_path=file_path, filename=filename, global_name=global_name,output_columns=output_columns)
 
    
 @app.route('/eda_column', methods=['GET', 'POST'])
@@ -254,11 +310,7 @@ def Predict():
                     x,y = to_sequences(test,1,18)
                     test_pred = model.predict(x)
                     testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
-                    plt.clf() 
-                    plt.plot(y,label="Actual value")
-                    plt.plot(test_pred,label="Predicted value")
-                    plt.legend()
-                    plt.savefig('static/images/plot_predict.png')
+                    eda_model_FFNN(y,test_pred,column_prediction)
                     return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse = testScore_rmse,testScore_mae = testScore_mae, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
                 else: # Train a new model
                     train_new, test_new = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio)
@@ -266,11 +318,7 @@ def Predict():
                     x,y = to_sequences(test_new,1,seq_size)      
                     test_pred = model.predict(x)
                     testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
-                    plt.clf() 
-                    plt.plot(y,label="Actual value")
-                    plt.plot(test_pred,label="Predicted value")
-                    plt.legend()
-                    plt.savefig('static/images/plot_predict.png')
+                    eda_model_FFNN(y,test_pred,column_prediction)
                     return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse = testScore_rmse,testScore_mae = testScore_mae, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes, split_ratio=split_ratio)  
         elif global_name == 'AMAZON':
             train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
@@ -285,36 +333,64 @@ def Predict():
             x,y = to_sequences(test_datanew,1,seq_size_new)      
             test_pred = model.predict(x)
             testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
-            plt.clf() 
-            plt.plot(y,label="Actual value")
-            plt.plot(test_pred,label="Predicted value")
-            plt.legend()
-            plt.savefig('static/images/plot_predict.png')
+            eda_model_FFNN(y,test_pred,column_prediction)
             return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,hidden_neurons=hidden_neurons_new, seq_size=seq_size_new, hidden_layers=hidden_layers_new, epochs=epochs_new, batch_sizes=batch_sizes_new, split_ratio=split_ratio_new)     
     elif algorithm == 'algorithm-lstm':
         array_stock = list(["Open","High","Low","Close","Adj Close"])
-        if global_name == 'APPLE':
-            seq_size_lstm = 12
-            hidden_neurons_lstm = 5
-            output_lstm = 5
-            model_path_lstm = model_path_lstm + 'LSTM_APPLE.h5'
-            train, test = split_data_default(scale_data(global_data[array_stock]))              
-            model_lstm = LSTM_exist(train, test, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
-            testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
-            result_LSTM = model_lstm.predict(testX_LSTM) 
-            if column_prediction == 'Open':
-                if useExistingModel == 'on':                  
-                    predict_LSTM_Open = result_LSTM[:,array_stock.index('Open')]
-                    textY_LSTM_Open = testY_LSTM[:,array_stock.index('Open')]  
-                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Open, predict_LSTM_Open)
-                    plt.clf() 
-                    plt.plot(textY_LSTM_Open,label="Actual value")
-                    plt.plot(predict_LSTM_Open,label="Predicted value")
-                    plt.legend()
-                    plt.savefig('static/images/plot_predict.png')
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)                 
-        else:
-            return render_template('index.html', message="Please choose a model"), 400
+        if useExistingModel == 'on': 
+            if global_name == 'APPLE':
+                seq_size_lstm = 12
+                hidden_neurons_lstm = 5
+                output_lstm = 5
+                model_path_lstm = model_path_lstm + 'LSTM_APPLE.h5'
+                train, test = split_data_default(scale_data(global_data[array_stock]))              
+                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
+                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
+                result_LSTM = model_lstm.predict(testX_LSTM) 
+                if column_prediction == 'Open':                 
+                        predict_LSTM_Open = result_LSTM[:,array_stock.index('Open')]
+                        textY_LSTM_Open = testY_LSTM[:,array_stock.index('Open')]  
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Open, predict_LSTM_Open)
+                        eda_model_LSTM(textY_LSTM_Open,predict_LSTM_Open,column_prediction)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)                             
+                elif column_prediction == 'High':
+                        predict_LSTM_High = result_LSTM[:,array_stock.index('High')]
+                        textY_LSTM_High = testY_LSTM[:,array_stock.index('High')]
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_High, predict_LSTM_High)
+                        eda_model_LSTM(textY_LSTM_High,predict_LSTM_High,column_prediction)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                elif column_prediction == 'Low':
+                        predict_LSTM_Low = result_LSTM[:,array_stock.index('Low')]
+                        textY_LSTM_Low = testY_LSTM[:,array_stock.index('Low')]
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Low, predict_LSTM_Low)
+                        eda_model_LSTM(textY_LSTM_Low,predict_LSTM_Low,column_prediction)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                elif column_prediction == 'Close':
+                        predict_LSTM_Close = result_LSTM[:,array_stock.index('Close')]
+                        textY_LSTM_Close = testY_LSTM[:,array_stock.index('Close')]
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Close, predict_LSTM_Close)
+                        eda_model_LSTM(textY_LSTM_Close,predict_LSTM_Close,column_prediction)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                elif column_prediction == 'Adj Close':
+                        predict_LSTM_Adj_Close = result_LSTM[:,array_stock.index('Adj Close')]
+                        textY_LSTM_Adj_Close = testY_LSTM[:,array_stock.index('Adj Close')]
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Adj_Close, predict_LSTM_Adj_Close)
+                        eda_model_LSTM(textY_LSTM_Adj_Close,predict_LSTM_Adj_Close,column_prediction)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+        else: # Train a new model
+            global array_column_new
+            output_lstm_new = len(array_column_new)
+            split_ratio_lstm_new, hidden_neurons_lstm_new,seq_size_lstm_new, epochs_lstm_new, batch_sizes_lstm_new, hidden_layers_lstm_new = get_param_ffnn_datasetNew()                                
+            
+            train_new, test_new = split_data_new(scale_data(global_data[array_column_new]),split_ratio_lstm_new)
+            model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new)
+            testX_LSTM_new, testY_LSTM_new = to_sequences_multivariate_lstm(test_new, seq_size_lstm_new)                               
+            result_LSTM_new = model_new.predict(testX_LSTM_new)                   
+            predict_LSTM_Open = result_LSTM_new[:,array_stock.index(column_prediction)]
+            textY_LSTM_Open = testY_LSTM_new[:,array_stock.index(column_prediction)]
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Open, predict_LSTM_Open)
+            eda_model_LSTM(textY_LSTM_Open,predict_LSTM_Open,column_prediction)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
     else:
         return render_template('index.html', message="Please choose a model"), 400
 
@@ -332,8 +408,15 @@ def save_param():
     name = global_parameters.get('name', None)
     if name is not None:
         print(f"The value of 'name' is {name}")
-    return jsonify({'message': 'Parameters received'}), 200
-    
+    return jsonify({'message': 'Received'}), 200
+
+array_column_new = []
+@app.route('/getcolumn_ouput_multi', methods=['POST'])
+def get_columns():
+    global array_column_new
+    array_column_new = request.get_json()
+    print(array_column_new)
+    return jsonify({'message': 'Received'}), 200
     
 if __name__ == '__main__':
     app.run(debug=True) 

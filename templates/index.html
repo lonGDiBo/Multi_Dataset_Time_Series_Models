@@ -469,26 +469,40 @@
         <div class="selection-predict">
 
             <label style="padding-left: 46px; padding-right: 27px;" for="algorithm">Choose a column:</label>
+
             <select id="column_prediction" name="column1">
                 <option value="">-- Please choose a column for predict --</option>
+                {%if global_name == "GOOGLE" or global_name == "APPLE" or global_name == "AMAZON" or global_name ==
+                "Weather_WS" or global_name == "weather-HCM"%}
                 {% for column in columns %}
                 <option value="{{ column }}">{{ column }}</option>
-                {% endfor %}
-            </select>
-
-            <script>
-                document.getElementById('column_prediction').addEventListener('focus', function () {
-                    this.children[0].style.display = 'none';
-                    for (var i = 0; i < this.children.length; i++) {
-                        var child = this.children[i];
-                        // if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time' || child.value === 'Adj Close') {
-                        if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time') {
-                            child.style.display = 'none';
+                <script>
+                    document.getElementById('column_prediction').addEventListener('focus', function () {
+                        this.children[0].style.display = 'none';
+                        for (var i = 0; i < this.children.length; i++) {
+                            var child = this.children[i];
+                            // if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time' || child.value === 'Adj Close') {
+                            if (child.value === 'date' || child.value === 'Volume' || child.value === 'Date' || child.value === 'wind_d' || child.value === 'Date Time') {
+                                child.style.display = 'none';
+                            }
                         }
-                    }
-                });
-            </script>
-
+                    });
+                </script>
+                {% endfor %}
+                {%else%}
+                {% for column in output_columns %}
+                <option value="{{ column }}">{{ column }}</option>
+                <script>
+                    document.getElementById('column_prediction').addEventListener('focus', function () {
+                        this.children[0].style.display = 'none';
+                    });
+                </script>
+                {% endfor %}
+                {%endif%}
+            </select>
+            <div style="color: black; text-align: center; width: 100%; font-size: 12px; user-select: none;">
+                "If the column you want to predict is missing, please review its data and format"
+            </div>
             <div id="algorithm-selection" style="margin-bottom: 15px;">
                 <label style="padding-left: 46px;" for="algorithm">Choose an algorithm:</label>
                 <select id="algorithm" name="algorithm">
@@ -521,25 +535,85 @@
                 <input type="checkbox" id="useExistingModel" name="useExistingModel" style="margin-left: 43px;">
                 <label style="font-size: 14px;" for="useExistingModel">Applying a pre-optimized parameter model</label>
             </div>
-            <p id='or_predict'
-                style=" display: none ;margin-left: 70px; margin-top: 10px;margin-bottom: 10px;  user-select: none;">or
-            </p>
-            <span class="adjust-parameter"
-                style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 14px;color: #3652AD;"
-                onclick="toggleLabel()">Configure Options</span>
+            <span id='or_predict' style=" display: none ;margin-left: 70px; margin-top: 10px; user-select: none;">or
+            </span>
 
+            <div id="getcolumnoutput" style="display: none; align-items: center; margin-bottom: 10px;">
+                <label style="padding-left: 46px; padding-right: 5px;">Pick output columns:</label>
+                <div class="customCheckBoxHolder">
+                    {%if global_name == "GOOGLE" or global_name == "APPLE" or global_name == "AMAZON" or global_name ==
+                    "Weather_WS" or global_name == "weather-HCM"%}
+                    {% for column in columns %}
+                    <input class="customCheckBoxInput" id="cCB{{ loop.index }}" type="checkbox" value="{{ column }}"
+                        onchange="submitColumns()">
+                    <label class="customCheckBoxWrapper" for="cCB{{ loop.index }}">
+                        <div class="customCheckBox">
+                            <div class="inner">{{ column }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                    {%else%}
+                    {% for column in output_columns %}
+                    <input class="customCheckBoxInput" id="cCB{{ loop.index }}" type="checkbox" value="{{ column }}"
+                        onchange="submitColumns()">
+                    <label class="customCheckBoxWrapper" for="cCB{{ loop.index }}">
+                        <div class="customCheckBox">
+                            <div class="inner">{{ column }}</div>
+                        </div>
+                    </label>
+                    {% endfor %}
+                    {%endif%}
+                </div>
+            </div>
+            <script>
+                function submitColumns() {
+                    let selectedColumns = [];
+                    document.querySelectorAll('.customCheckBoxInput:checked').forEach((checkbox) => {
+                        selectedColumns.push(checkbox.value);
+                    });
+                    fetch('/getcolumn_ouput_multi', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(selectedColumns),
+                    })
+                        .then(response => response.json())
+                        .then(data => console.log(data))
+                        .catch((error) => {
+                            console.error('Error:', error);
+                        });
+                }
+            </script>
+
+            <span class="adjust-parameter"
+                style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 14px;color: #3652AD; margin-top: 5px;"
+                onclick="toggleLabel()">Configure Options</span>
+            <!-- Custome Adjust Param  -->
             <script>
                 document.getElementById('algorithm').addEventListener('change', function () {
                     var configOptionsSpan = document.querySelector('.adjust-parameter');
                     var checkboxUseParam = document.getElementById('checkboxparam');
+                    var getalgorithm = document.getElementById('algorithm');
+                    var outputcolumn = document.getElementById('getcolumnoutput');
                     var or_predict = document.getElementById('or_predict');
                     var dataset = globalName;
                     if (dataset == "AMAZON" || dataset == "APPLE" || dataset == "GOOGLE" || dataset == "Weather_WS" || dataset == "weather-HCM") {
                         if (this.value !== '') {
-                            configOptionsSpan.style.display = 'block';
-                            checkboxUseParam.style.display = 'block';
-                            or_predict.style.display = 'block';
+                            if (getalgorithm.value == 'algorithm-lstm' || getalgorithm.value == 'algorithm-varnn' || getalgorithm.value == 'algorithm-var') {
+                                outputcolumn.style.display = 'block';
+                                configOptionsSpan.style.display = 'block';
+                                checkboxUseParam.style.display = 'block';
+                                or_predict.style.display = 'block';
+                            }
+                            else {
+                                outputcolumn.style.display = 'none';
+                                configOptionsSpan.style.display = 'block';
+                                checkboxUseParam.style.display = 'block';
+                                or_predict.style.display = 'block';
+                            }
                         } else {
+                            outputcolumn.style.display = 'none';
                             configOptionsSpan.style.display = 'none';
                             checkboxUseParam.style.display = 'none';
                             or_predict.style.display = 'none';
@@ -547,12 +621,13 @@
                     }
                     else {
                         configOptionsSpan.style.display = 'block';
+                        outputcolumn.style.display = 'block';
                         or_predict.style.display = 'none';
                         checkboxUseParam.style.display = 'none';
                     }
                 });
             </script>
-
+            <!-- Add Modal adjust param -->
             <div id="myModal" class="modal">
                 <div class="modal-content">
                     <div class="header-adjust">
@@ -584,7 +659,7 @@
                     </div>
                 </div>
             </div>
-
+            <!-- Event Open and Close MyModal -->
             <script>
                 var modal = document.getElementById("myModal");
                 var span = document.getElementsByClassName("close")[0];
@@ -611,6 +686,7 @@
                     }
                 }
             </script>
+            <!-- Get global name dataset -->
             <script>
                 var globalName = "{{ global_name }}";
             </script>
@@ -685,8 +761,7 @@
                     return inputGroup;
                 }
             </script>
-
-
+            <!-- Reset Button -->
             <script>
                 document.getElementById('resetButton').addEventListener('click', function () {
                     var inputGroups = document.getElementsByClassName('input-group');
@@ -703,7 +778,7 @@
                     select.selectedIndex = 0;
                 });
             </script>
-
+            <!-- Save button -->
             <script>
                 document.getElementById('saveButton').addEventListener('click', function () {
                     var parameters = {};
@@ -753,7 +828,6 @@
                     })
                         .then(response => response.json())
                         .then(data => {
-                            console.log('Success:', data);
                             document.getElementById('myModal').style.display = 'none';
                             document.body.style.overflow = 'auto';
 
@@ -775,6 +849,7 @@
                         });
                 });
             </script>
+            <!-- Alert Save Param Success -->
             <div id="alert-save-param-success" style="padding: 10px; display:none">
                 <span
                     style="font-weight: bold; color: rgb(231, 231, 231); top: 50%; transform: translateY(-50%); margin-right: 5px; font-size: 15px;">
@@ -784,7 +859,7 @@
                 <span id="close-alert-save-param-success"
                     style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
             </div>
-
+            <!-- Alert save param Failed -->
             <div id="alert-save-param-failed" style="padding: 10px; display:none">
                 <span
                     style="font-weight: bold; color: rgb(231, 231, 231); top: 50%; transform: translateY(-50%); margin-right: 5px; font-size: 15px;">
@@ -794,6 +869,7 @@
                 <span id="close-alert-save-param-failed"
                     style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 25px;">&times;</span>
             </div>
+            <!-- Close Alert Failed and success when you save param -->
             <script>
                 document.getElementById('close-alert-save-param-success').addEventListener('click', function () {
                     this.parentElement.style.opacity = '0';
