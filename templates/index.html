@@ -544,19 +544,21 @@
                     {%if global_name == "GOOGLE" or global_name == "APPLE" or global_name == "AMAZON" or global_name ==
                     "Weather_WS" or global_name == "weather-HCM"%}
                     {% for column in columns %}
-                    <input class="customCheckBoxInput" id="cCB{{ loop.index }}" type="checkbox" value="{{ column }}"
+                    {% if column != 'Date' and column !='date' and column != 'Date Time' and column != 'wind_d' %}
+                    <input class="customCheckBoxInput" id="cCB{{ column }}" type="checkbox" value="{{ column }}"
                         onchange="submitColumns()">
-                    <label class="customCheckBoxWrapper" for="cCB{{ loop.index }}">
+                    <label class="customCheckBoxWrapper" for="cCB{{ column }}">
                         <div class="customCheckBox">
                             <div class="inner">{{ column }}</div>
                         </div>
                     </label>
+                    {% endif %}
                     {% endfor %}
                     {%else%}
                     {% for column in output_columns %}
-                    <input class="customCheckBoxInput" id="cCB{{ loop.index }}" type="checkbox" value="{{ column }}"
+                    <input class="customCheckBoxInput" id="cCB{{ column }}" type="checkbox" value="{{ column }}"
                         onchange="submitColumns()">
-                    <label class="customCheckBoxWrapper" for="cCB{{ loop.index }}">
+                    <label class="customCheckBoxWrapper" for="cCB{{ column }}">
                         <div class="customCheckBox">
                             <div class="inner">{{ column }}</div>
                         </div>
@@ -565,6 +567,24 @@
                     {%endif%}
                 </div>
             </div>
+            <script>
+                var currentPredictedColumn = null;
+
+                document.getElementById('column_prediction').addEventListener('change', function () {
+                    var selectedColumn = this.options[this.selectedIndex].value;
+
+                    if (currentPredictedColumn) {
+                        var oldCheckbox = document.getElementById('cCB' + currentPredictedColumn);
+                        oldCheckbox.disabled = false;
+                    }
+
+                    var checkbox = document.getElementById('cCB' + selectedColumn);
+                    checkbox.checked = true;
+                    checkbox.disabled = true;
+
+                    currentPredictedColumn = selectedColumn;
+                });
+            </script>
             <script>
                 function submitColumns() {
                     let selectedColumns = [];

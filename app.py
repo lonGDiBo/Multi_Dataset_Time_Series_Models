@@ -30,7 +30,7 @@ def load_data(file_path):
 
 def load_data_new(file_path):
     data = pd.read_csv(file_path)
-    data.dropna()
+    # data.dropna()
     df_numerical = data.select_dtypes(include=[float, int])
     df_final= df_numerical.dropna(axis=1)
     return df_final
