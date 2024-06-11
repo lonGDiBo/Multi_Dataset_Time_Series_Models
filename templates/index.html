@@ -567,6 +567,7 @@
                     {%endif%}
                 </div>
             </div>
+            <!-- If the selected column is predicted, it will be selected by default -->
             <script>
                 var currentPredictedColumn = null;
 
@@ -585,6 +586,7 @@
                     currentPredictedColumn = selectedColumn;
                 });
             </script>
+            <!-- Get output columns -->
             <script>
                 function submitColumns() {
                     let selectedColumns = [];
@@ -911,24 +913,52 @@
             <div id="predictionStatus"
                 style=" display:None; color: black; text-align: center; width: 100%; font-size: 13px; user-select: none; margin-top: 10px; margin-bottom: 10px">
             </div>
-            <p id="mseDisplay" style="display: none; margin-left: 43px;"></p>
-            <p id="rmseDisplay" style="display: none; margin-left: 43px;"></p>
-            <p id="maeDisplay" style="display: none; margin-left: 43px;"></p>
-
-            <p id="hd_layer" style="display: none; margin-left: 43px;"></p>
+            <!-- <p id="hd_layer" style="display: none; margin-left: 43px;"></p>
             <p id="hd_neuron" style="display: none; margin-left: 43px;"></p>
             <p id="data window size" style="display: none; margin-left: 43px;"></p>
             <p id="epoch" style="display: none; margin-left: 43px;"></p>
             <p id="batchsize" style="display: none; margin-left: 43px;"></p>
-            <p id="split-ratio" style="display: none; margin-left: 43px;"></p>
+            <p id="split-ratio" style="display: none; margin-left: 43px;"></p> -->
+            <div id="infor_predict" style="display: none;">
+                <div id="checkboxrealvalue">
+                    <input type="checkbox" id="showRealValue" name="showRealValue">
+                    <label for="showRealValue">Show by real value</label>
+                </div>
+
+                <div id="mseContainer" style="display: flex; ">
+                    <div id="dodo">
+                        <p id="mse">MSE: </p>
+                    </div>
+                    <p id="mseDisplay"></p>
+                </div>
+
+                <div id="rmseContainer" style="display: flex; ">
+                    <div id="dodo">
+                        <p id="rmse">RMSE: </p>
+                    </div>
+                    <p id="rmseDisplay"></p>
+                </div>
+
+                <div id="maeContainer" style="display: flex; ">
+                    <div id="dodo">
+                        <p id="mae">MAE: </p>
+                    </div>
+                    <p id="maeDisplay"></p>
+                </div>
+                <button id="viewParameters" type="button">View model parameters</button>
+            </div>
         </div>
-        <div class="chart">
+        <!-- Chart predict -->
+        <div class=" chart">
             <img id="plot-predict" src="static/images/Loading-Spinner.gif" alt="Plot">
         </div>
     </form>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script>
+        var isRealValueShown = false;
+        var predictionData = null;
+
         $(document).ready(function () {
             $('#PredictData').click(function (e) {
                 e.preventDefault(); // Prevent the form from being submitted normally
@@ -939,15 +969,6 @@
 
                 // Show the prediction status and update its text
                 var predictionStatus = document.getElementById('predictionStatus');
-                var mseDisplay = document.getElementById('mseDisplay');
-                var rmseDisplay = document.getElementById('rmseDisplay');
-                var maeDisplay = document.getElementById('maeDisplay');
-                var hd_layerdisplay = document.getElementById('hd_layer');
-                var hd_neurondisplay = document.getElementById('hd_neuron');
-                var data_window_size = document.getElementById('data window size');
-                var epoch = document.getElementById('epoch');
-                var batchsize = document.getElementById('batchsize');
-                var split_ratio = document.getElementById('split-ratio');
                 predictionStatus.style.display = 'block';
                 predictionStatus.textContent = ' Currently in the process of predicting...';
 
@@ -963,33 +984,11 @@
                         console.log('Algorithm:', data.algorithm);
                         console.log('Column prediction:', data.column_prediction);
                         predictionStatus.textContent = 'Successfully predicted...';
+                        document.getElementById('infor_predict').style.display = 'block';
 
-                        mseDisplay.style.display = 'block';
-                        mseDisplay.textContent = 'MSE: ' + data.testScore_mse;
+                        predictionData = data;
+                        updatePredictionDisplay();
 
-                        rmseDisplay.style.display = 'block';
-                        rmseDisplay.textContent = 'RMSE: ' + data.testScore_rmse;
-
-                        maeDisplay.style.display = 'block';
-                        maeDisplay.textContent = 'MAE: ' + data.testScore_mae;
-
-                        hd_layerdisplay.style.display = 'block';
-                        hd_layerdisplay.textContent = 'Hidden Layer: ' + data.hidden_layers;
-
-                        hd_neurondisplay.style.display = 'block';
-                        hd_neurondisplay.textContent = 'Hidden Neuron: ' + data.hidden_neurons;
-
-                        data_window_size.style.display = 'block';
-                        data_window_size.textContent = 'Data Window Size: ' + data.seq_size;
-
-                        epoch.style.display = 'block';
-                        epoch.textContent = 'Epoch: ' + data.epochs;
-
-                        batchsize.style.display = 'block';
-                        batchsize.textContent = 'Batch Size: ' + data.batch_sizes;
-
-                        split_ratio.style.display = 'block';
-                        split_ratio.textContent = 'Split Ratio: ' + data.split_ratio;
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
 
                     },
@@ -1002,7 +1001,29 @@
                     }
                 });
             });
+
+            $('#showRealValue').click(function () {
+                isRealValueShown = !isRealValueShown;
+                updatePredictionDisplay();
+            });
         });
+
+        function updatePredictionDisplay() {
+            var mseDisplay = document.getElementById('mseDisplay');
+            var rmseDisplay = document.getElementById('rmseDisplay');
+            var maeDisplay = document.getElementById('maeDisplay');
+
+            if (isRealValueShown) {
+                mseDisplay.textContent = predictionData.testScore_mse_real;
+                rmseDisplay.textContent = predictionData.testScore_rmse_real;
+                maeDisplay.textContent = predictionData.testScore_mae_real;
+
+            } else {
+                mseDisplay.textContent = predictionData.testScore_mse;
+                rmseDisplay.textContent = predictionData.testScore_rmse;
+                maeDisplay.textContent = predictionData.testScore_mae;
+            }
+        }
     </script>
 
 

@@ -25,19 +25,23 @@ from flask import abort, redirect, url_for
 
 def load_data(file_path):
     data = pd.read_csv(file_path)
-    # data.dropna()
     return data
 
 def load_data_new(file_path):
     data = pd.read_csv(file_path)
-    # data.dropna()
     df_numerical = data.select_dtypes(include=[float, int])
     df_final= df_numerical.dropna(axis=1)
     return df_final
 
-def scale_data(data):
+def scale_data_lstm(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
     return scaler.fit_transform(data)
+
+def scale_data(data):
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(data)
+    return scaled_data, scaler
+
 
 def split_data_default(data, split_ratio=0.8):
     train_size = int(len(data) * split_ratio)
@@ -59,15 +63,6 @@ def to_sequences(dataset,timestep , seq_size=1):
         y.append(dataset[i+seq_size, 0])
     return np.array(x),np.array(y)
 
-def to_sequences(dataset,timestep , seq_size=1):
-    x = []
-    y = []
-    for i in range(0,len(dataset)-seq_size,timestep):
-        #print(i)
-        window = dataset[i:(i+seq_size), 0]
-        x.append(window)
-        y.append(dataset[i+seq_size, 0])
-    return np.array(x),np.array(y)
 
 def to_sequences_multivariate_varnn(dataset,p):
     x = []
@@ -160,11 +155,16 @@ def LSTM_new( train,test,outputs,seq,hidden_neural,epochs,batch_size,hidden_laye
 
 
 
-def calculate_metrics_Standardization(test, predictions):
+def calculate_metrics(test, predictions):
     mse = mean_squared_error(test, predictions)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(test, predictions)
     return mse, rmse, mae
+
+def scale_data_default(test,predictions,scaler):
+    predictions_actual = scaler.inverse_transform(predictions.reshape(1, -1))
+    test_actual = scaler.inverse_transform(test.reshape(1, -1))
+    return predictions_actual, test_actual
 
 def eda_model_FFNN(y,test_pred,column_prediction):
     plt.clf() 
@@ -288,93 +288,103 @@ def Predict():
     useExistingModel = request.form.get('useExistingModel') 
     model = None
             
-    if  algorithm == 'algorithm-ffnn':        
-        if global_name == 'GOOGLE':
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
-        elif global_name == 'APPLE':
+    if  algorithm == 'algorithm-ffnn':       
+        if useExistingModel == 'on': # For existing model
             default_hidden_layers = 1
-            default_split_ratio = 0.8
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-            if column_prediction == 'Open': 
-                # Default parameters
-                default_hidden_neurons = 16
-                default_seq_size = 18
-                default_epochs = 400
-                default_batch_size = 32                
-                # Get parameters
-                split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
-                # Check if the user wants to use an existing model
-                if useExistingModel == 'on':
+            default_split_ratio = 0.8             
+            if global_name == 'GOOGLE':
+                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
+            elif global_name == 'APPLE':
+                scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
+                train, test = split_data_default(scaled_data)
+                if column_prediction == 'Open': 
+                    # Default parameters
+                    default_hidden_neurons = 16
+                    default_seq_size = 18
+                    default_epochs = 400
+                    default_batch_size = 32                
+                    # Get parameters
+                    split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
+                    # Check if the user wants to use an existing model
                     model_path = model_path_ffnn + 'FFNN_Model_Apple_Open.h5'
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
                     x,y = to_sequences(test,1,18)
                     test_pred = model.predict(x)
-                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
+                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
+                    
+                    y_real, test_pred_real = scale_data_default(y,test_pred,scaler)                                         
+                    testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
+                    
                     eda_model_FFNN(y,test_pred,column_prediction)
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse = testScore_rmse,testScore_mae = testScore_mae, hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, hidden_layers=default_hidden_layers, epochs=default_epochs, batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
-                else: # Train a new model
-                    train_new, test_new = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio)
-                    model = model_ffnn_new(train_new, test_new,hidden_layers, seq_size, hidden_neurons, epochs, batch_sizes)
-                    x,y = to_sequences(test_new,1,seq_size)      
-                    test_pred = model.predict(x)
-                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
-                    eda_model_FFNN(y,test_pred,column_prediction)
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse = testScore_rmse,testScore_mae = testScore_mae, hidden_neurons=hidden_neurons, seq_size=seq_size, hidden_layers=hidden_layers, epochs=epochs, batch_sizes=batch_sizes, split_ratio=split_ratio)  
-        elif global_name == 'AMAZON':
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
-        elif global_name == 'Weather_WS':
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
-        elif global_name == 'weather-HCM':
-            train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))     
-        else: # For new dataset
+                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                                    testScore_mse=testScore_mse, testScore_rmse = testScore_rmse,testScore_mae = testScore_mae,
+                                    testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                    hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, 
+                                    hidden_layers=default_hidden_layers, epochs=default_epochs, 
+                                    batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
+            elif global_name == 'AMAZON':
+                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+            elif global_name == 'Weather_WS':
+                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
+            elif global_name == 'weather-HCM':
+                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))     
+        else: # For new dataset or train no existing model
             split_ratio_new,hidden_neurons_new,seq_size_new,epochs_new,batch_sizes_new,hidden_layers_new = get_param_ffnn_datasetNew()            
-            train_datanew, test_datanew = split_data_new(scale_data(global_data[column_prediction].values.reshape(-1,1)),split_ratio_new)
+            scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
+            train_datanew, test_datanew = split_data_new(scaled_data,split_ratio_new)
             model = model_ffnn_new(train_datanew, test_datanew,hidden_layers_new, seq_size_new, hidden_neurons_new, epochs_new, batch_sizes_new)
             x,y = to_sequences(test_datanew,1,seq_size_new)      
             test_pred = model.predict(x)
-            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(y, test_pred)
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
+            y_real, test_pred_real = scale_data_default(y,test_pred,scaler)                                         
+            testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
+            
             eda_model_FFNN(y,test_pred,column_prediction)
-            return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,hidden_neurons=hidden_neurons_new, seq_size=seq_size_new, hidden_layers=hidden_layers_new, epochs=epochs_new, batch_sizes=batch_sizes_new, split_ratio=split_ratio_new)     
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                           testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                           testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                           hidden_neurons=hidden_neurons_new, seq_size=seq_size_new, hidden_layers=hidden_layers_new, 
+                           epochs=epochs_new, batch_sizes=batch_sizes_new, split_ratio=split_ratio_new)     
     elif algorithm == 'algorithm-lstm':
-        array_stock = list(["Open","High","Low","Close","Adj Close"])
         if useExistingModel == 'on': 
+            array_stock = list(["Open","High","Low","Close","Adj Close"])
             if global_name == 'APPLE':
                 seq_size_lstm = 12
                 hidden_neurons_lstm = 5
                 output_lstm = 5
                 model_path_lstm = model_path_lstm + 'LSTM_APPLE.h5'
-                train, test = split_data_default(scale_data(global_data[array_stock]))              
+                train, test = split_data_default(scale_data_lstm(global_data[array_stock]))                
                 model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
                 testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
                 result_LSTM = model_lstm.predict(testX_LSTM) 
                 if column_prediction == 'Open':                 
                         predict_LSTM_Open = result_LSTM[:,array_stock.index('Open')]
                         textY_LSTM_Open = testY_LSTM[:,array_stock.index('Open')]  
-                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Open, predict_LSTM_Open)
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Open, predict_LSTM_Open)
                         eda_model_LSTM(textY_LSTM_Open,predict_LSTM_Open,column_prediction)
                         return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)                             
                 elif column_prediction == 'High':
                         predict_LSTM_High = result_LSTM[:,array_stock.index('High')]
                         textY_LSTM_High = testY_LSTM[:,array_stock.index('High')]
-                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_High, predict_LSTM_High)
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_High, predict_LSTM_High)
                         eda_model_LSTM(textY_LSTM_High,predict_LSTM_High,column_prediction)
                         return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
                 elif column_prediction == 'Low':
                         predict_LSTM_Low = result_LSTM[:,array_stock.index('Low')]
                         textY_LSTM_Low = testY_LSTM[:,array_stock.index('Low')]
-                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Low, predict_LSTM_Low)
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Low, predict_LSTM_Low)
                         eda_model_LSTM(textY_LSTM_Low,predict_LSTM_Low,column_prediction)
                         return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
                 elif column_prediction == 'Close':
                         predict_LSTM_Close = result_LSTM[:,array_stock.index('Close')]
                         textY_LSTM_Close = testY_LSTM[:,array_stock.index('Close')]
-                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Close, predict_LSTM_Close)
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Close, predict_LSTM_Close)
                         eda_model_LSTM(textY_LSTM_Close,predict_LSTM_Close,column_prediction)
                         return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
                 elif column_prediction == 'Adj Close':
                         predict_LSTM_Adj_Close = result_LSTM[:,array_stock.index('Adj Close')]
                         textY_LSTM_Adj_Close = testY_LSTM[:,array_stock.index('Adj Close')]
-                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Adj_Close, predict_LSTM_Adj_Close)
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Adj_Close, predict_LSTM_Adj_Close)
                         eda_model_LSTM(textY_LSTM_Adj_Close,predict_LSTM_Adj_Close,column_prediction)
                         return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
         else: # Train a new model
@@ -388,7 +398,7 @@ def Predict():
             result_LSTM_new = model_new.predict(testX_LSTM_new)                   
             predict_LSTM_Open = result_LSTM_new[:,array_stock.index(column_prediction)]
             textY_LSTM_Open = testY_LSTM_new[:,array_stock.index(column_prediction)]
-            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics_Standardization(textY_LSTM_Open, predict_LSTM_Open)
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Open, predict_LSTM_Open)
             eda_model_LSTM(textY_LSTM_Open,predict_LSTM_Open,column_prediction)
             return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
     else:
