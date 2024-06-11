@@ -742,6 +742,8 @@
                     } else {
                         parameters = defaultParameters[algorithm];  // Use default parameters for the algorithm
                     }
+                    var algorithmDropdown = document.getElementById('split');
+                    algorithmDropdown.selectedIndex = 0;
 
                     var modal = document.getElementById('myModal');
                     var leftContainer = modal.querySelector('.container-choosepara .item.left');
