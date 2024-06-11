@@ -293,8 +293,9 @@ def Predict():
     testScore_mse_real = 0
     testScore_rmse_real = 0
     testScore_mae_real = 0
-    model_path_ffnn = 'Model/Apple/FFNN/'
-    model_path_lstm = 'Model/Apple/LSTM/'
+    model_path_apple = 'Model/Apple/'
+    model_path_amazon = 'Model/Amazon/'
+    model_path_google = 'Model/Google/'
     algorithm = request.form.get('algorithm')
     column_prediction = request.form.get('column_prediction')
     useExistingModel = request.form.get('useExistingModel') 
@@ -325,7 +326,7 @@ def Predict():
                     # Get parameters
                     split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
                     # Check if the user wants to use an existing model
-                    model_path = model_path_ffnn + 'FFNN_Model_Apple_Open.h5'
+                    model_path = model_path_apple + 'FFNN/FFNN_Model_Apple_Open.h5'
                     
                     start_train = time.time()
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
@@ -396,7 +397,7 @@ def Predict():
                 seq_size_lstm = 12
                 hidden_neurons_lstm = 5
                 output_lstm = 5      
-                model_path_lstm = model_path_lstm + 'LSTM_APPLE.h5'
+                model_path_lstm = model_path_apple + 'LSTM/LSTM_APPLE.h5'
                 scaled_data, scaler = scale_data(global_data[array_stock])
                 train, test = split_data_default(scaled_data)    
                 
@@ -427,6 +428,76 @@ def Predict():
                                 batch_sizes=batch_sizes_lstm, 
                                 split_ratio=split_ratio_lstm,
                                 time_train = time_train,time_predict = time_predict)
+            elif global_name == 'GOOGLE':
+                seq_size_lstm = 12
+                hidden_neurons_lstm = 5
+                output_lstm = 5      
+                model_path_lstm = model_path_google + 'LSTM/LSTM_GOOGLE.h5'
+                scaled_data, scaler = scale_data(global_data[array_stock])
+                train, test = split_data_default(scaled_data)    
+                
+                start_train = time.time()         
+                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
+                end_train = time.time()
+                
+                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
+                
+                start_predict = time.time()
+                result_LSTM = model_lstm.predict(testX_LSTM) 
+                end_predict = time.time()
+                
+                predict_LSTM_real = scaler.inverse_transform(result_LSTM)
+                textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
+                time_train = round(end_train - start_train, 5)
+                time_predict = round(end_predict - start_predict, 5) 
+                                                             
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction)
+                
+                return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                hidden_neurons = hidden_neurons_lstm, 
+                                seq_size=seq_size_lstm, 
+                                hidden_layers= hidden_layers_lstm,
+                                epochs=epochs_lstm, 
+                                batch_sizes=batch_sizes_lstm, 
+                                split_ratio=split_ratio_lstm,
+                                time_train = time_train,time_predict = time_predict)                
+            elif global_name == 'AMAZON':
+                seq_size_lstm = 12
+                hidden_neurons_lstm = 5
+                output_lstm = 5      
+                model_path_lstm = model_path_amazon + 'LSTM/LSTM_AMAZON.h5'
+                scaled_data, scaler = scale_data(global_data[array_stock])
+                train, test = split_data_default(scaled_data)    
+                
+                start_train = time.time()         
+                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
+                end_train = time.time()
+                
+                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
+                
+                start_predict = time.time()
+                result_LSTM = model_lstm.predict(testX_LSTM) 
+                end_predict = time.time()
+                
+                predict_LSTM_real = scaler.inverse_transform(result_LSTM)
+                textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
+                time_train = round(end_train - start_train, 5)
+                time_predict = round(end_predict - start_predict, 5) 
+                                                             
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction)
+                
+                return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                hidden_neurons = hidden_neurons_lstm, 
+                                seq_size=seq_size_lstm, 
+                                hidden_layers= hidden_layers_lstm,
+                                epochs=epochs_lstm, 
+                                batch_sizes=batch_sizes_lstm, 
+                                split_ratio=split_ratio_lstm,
+                                time_train = time_train,time_predict = time_predict)            
         else: # Train a new model or use a new dataset
             global array_column_new
             output_lstm_new = len(array_column_new)
