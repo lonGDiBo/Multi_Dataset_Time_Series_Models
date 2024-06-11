@@ -514,6 +514,7 @@
                     <option value="algorithm-arima">ARIMA</option>
                 </select>
             </div>
+            <!-- Open the alogrithm when you selected the column for predict -->
             <script>
                 var columnSelect = document.getElementById('column_prediction');
                 var algorithmSelect = document.getElementById('algorithm');
@@ -526,6 +527,7 @@
                     }
                 });
             </script>
+            <!-- Hide title selectbox -->
             <script>
                 document.getElementById('algorithm').addEventListener('focus', function () {
                     this.children[0].style.display = 'none';
@@ -774,7 +776,7 @@
                     var input = document.createElement('input');
                     input.required = true;
                     input.type = 'text';
-                    input.name = parameter.replace(/\s+/g, '_');
+                    input.name = parameter.replace(/[\s\(\)\{\}\[\]]+/g, '_');
                     input.autocomplete = 'off';
                     input.className = 'input-para';
                     input.title = 'Only numbers are allowed';
@@ -925,12 +927,17 @@
                 <div id="checkboxrealvalue">
                     <input type="checkbox" id="showRealValue" name="showRealValue">
                     <label for="showRealValue">Show by real value</label>
-                    <div id="timeContainer" style="display: flex; ">
+                </div>
+                <div id="timeContainer" style="display: flex;margin-left: auto;margin-right: auto;user-select: none;">
+                    <div id="timetraincontainer" style="display: flex; margin-left: 30px;">
                         <p id="timetrain">Time train: </p>
-                        <p id="timetrain"></p>
+                        <p id="timetrainDisplay" style=" margin-left: 5px;"></p>
+                    </div>
+                    <div id=" timetestcontainer" style="margin-left: 20px; display: flex;">
+                        <p id="timetest">Time predict: </p>
+                        <p id="timetestDisplay" style="margin-left: 5px;"></p>
                     </div>
                 </div>
-
                 <div id="mseContainer" style="display: flex; ">
                     <div id="dodo">
                         <p id="mse">MSE: </p>
@@ -957,7 +964,7 @@
                     <div id="SplitHiddenlayer" style="display: none ">
                         <div id="splitcontainer" style="display: flex;">
                             <div id="dodo1">
-                                <p id="split">Split data:</p>
+                                <p id="splitdata">Split data:</p>
                             </div>
                             <p id="splitDisplay"></p>
                         </div>
@@ -1021,11 +1028,12 @@
                 var column_prediction = document.getElementById('column_prediction').value; // Get the selected column
                 var useExistingModel = document.getElementById('useExistingModel').checked ? 'on' : 'off';
                 document.getElementById('infor_predict').style.display = 'none';
+                $("#plot-predict").attr("src", "static/images/Loading-Spinner.gif");
+                document.getElementById('modelParameters').style.display = 'none';
                 // Show the prediction status and update its text
                 var predictionStatus = document.getElementById('predictionStatus');
                 predictionStatus.style.display = 'block';
                 predictionStatus.textContent = ' Currently in the process of predicting...';
-
                 $.ajax({
                     url: '/model',
                     method: 'POST',
@@ -1071,7 +1079,6 @@
                 }
             });
         });
-
         function displayparam() {
             var epoch = document.getElementById('epochDisplay');
             var batchsize = document.getElementById('batchsizeDisplay');
@@ -1079,7 +1086,8 @@
             var split = document.getElementById('splitDisplay');
             var neuron = document.getElementById('neuronDisplay');
             var windowsize = document.getElementById('windowsizeDisplay');
-            var time = document.getElementById('timetrain');
+            var time_train = document.getElementById('timetrainDisplay');
+            var time_test = document.getElementById('timetestDisplay');
             document.getElementById('EpochBatchSize').style.display = 'flex';
             epoch.textContent = predictionData.epochs;
             batchsize.textContent = predictionData.batch_sizes;
@@ -1090,7 +1098,8 @@
             neuron.textContent = predictionData.hidden_neurons;
             windowsize.textContent = predictionData.seq_size;
 
-            time.textContent = predictionData.time_predict;
+            time_train.textContent = predictionData.time_train + ' (s)';
+            time_test.textContent = predictionData.time_predict + ' (s)';
         }
 
         function updatePredictionDisplay() {
