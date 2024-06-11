@@ -609,8 +609,8 @@
             </script>
 
             <span class="adjust-parameter"
-                style="padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 14px;color: #3652AD; margin-top: 5px;"
-                onclick="toggleLabel()">Configure Options</span>
+                style="user-select: none; padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 14px;color: #3652AD; margin-top: 5px;"
+                onclick="toggleLabel()">Configure options</span>
             <!-- Custome Adjust Param  -->
             <script>
                 document.getElementById('algorithm').addEventListener('change', function () {
@@ -642,10 +642,18 @@
                         }
                     }
                     else {
-                        configOptionsSpan.style.display = 'block';
-                        outputcolumn.style.display = 'block';
-                        or_predict.style.display = 'none';
-                        checkboxUseParam.style.display = 'none';
+                        if (getalgorithm.value == 'algorithm-lstm' || getalgorithm.value == 'algorithm-varnn' || getalgorithm.value == 'algorithm-var') {
+                            configOptionsSpan.style.display = 'block';
+                            outputcolumn.style.display = 'block';
+                            or_predict.style.display = 'none';
+                            checkboxUseParam.style.display = 'none';
+                        }
+                        else {
+                            configOptionsSpan.style.display = 'block';
+                            outputcolumn.style.display = 'none';
+                            or_predict.style.display = 'none';
+                            checkboxUseParam.style.display = 'none';
+                        }
                     }
                 });
             </script>
@@ -913,16 +921,14 @@
             <div id="predictionStatus"
                 style=" display:None; color: black; text-align: center; width: 100%; font-size: 13px; user-select: none; margin-top: 10px; margin-bottom: 10px">
             </div>
-            <!-- <p id="hd_layer" style="display: none; margin-left: 43px;"></p>
-            <p id="hd_neuron" style="display: none; margin-left: 43px;"></p>
-            <p id="data window size" style="display: none; margin-left: 43px;"></p>
-            <p id="epoch" style="display: none; margin-left: 43px;"></p>
-            <p id="batchsize" style="display: none; margin-left: 43px;"></p>
-            <p id="split-ratio" style="display: none; margin-left: 43px;"></p> -->
             <div id="infor_predict" style="display: none;">
                 <div id="checkboxrealvalue">
                     <input type="checkbox" id="showRealValue" name="showRealValue">
                     <label for="showRealValue">Show by real value</label>
+                    <div id="timeContainer" style="display: flex; ">
+                        <p id="timetrain">Time train: </p>
+                        <p id="timetrain"></p>
+                    </div>
                 </div>
 
                 <div id="mseContainer" style="display: flex; ">
@@ -946,6 +952,54 @@
                     <p id="maeDisplay"></p>
                 </div>
                 <button id="viewParameters" type="button">View model parameters</button>
+                <div id="modelParameters" style="display: none;">
+
+                    <div id="SplitHiddenlayer" style="display: none ">
+                        <div id="splitcontainer" style="display: flex;">
+                            <div id="dodo1">
+                                <p id="split">Split data:</p>
+                            </div>
+                            <p id="splitDisplay"></p>
+                        </div>
+                        <div id="hiddenlayercontainer" style="display: flex;">
+                            <div id="dodo1">
+                                <p id="hiddenlayer">Layers:</p>
+                            </div>
+                            <p id="hiddenlayerDisplay"></p>
+                        </div>
+                    </div>
+
+                    <div id="EpochBatchSize" style="display: none ">
+                        <div id="epochcontainer" style="display: flex;">
+                            <div id="dodo1">
+                                <p id="epoch">Epoch:</p>
+                            </div>
+                            <p id="epochDisplay"></p>
+                        </div>
+                        <div id="batchsizecontainer" style="display: flex;">
+                            <div id="dodo1">
+                                <p id="batchsize">Batch Size:</p>
+                            </div>
+                            <p id="batchsizeDisplay"></p>
+                        </div>
+                    </div>
+
+                    <div id="neuronWindowsize" style="display: none ">
+                        <div id="epochcontainer" style="display: flex;">
+                            <div id="dodo1">
+                                <p id="neuron">Neurons:</p>
+                            </div>
+                            <p id="neuronDisplay"></p>
+                        </div>
+                        <div id="windowsizecontainer" style="display: flex;">
+                            <div id="dodo1">
+                                <p id="windowsize">Window size: </p>
+                            </div>
+                            <p id="windowsizeDisplay" style="margin-left: 5px;"></p>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </div>
         <!-- Chart predict -->
@@ -966,7 +1020,7 @@
                 var algorithm = document.getElementById('algorithm').value; // Get the selected algorithm
                 var column_prediction = document.getElementById('column_prediction').value; // Get the selected column
                 var useExistingModel = document.getElementById('useExistingModel').checked ? 'on' : 'off';
-
+                document.getElementById('infor_predict').style.display = 'none';
                 // Show the prediction status and update its text
                 var predictionStatus = document.getElementById('predictionStatus');
                 predictionStatus.style.display = 'block';
@@ -988,6 +1042,8 @@
 
                         predictionData = data;
                         updatePredictionDisplay();
+                        if (data.algorithm == 'algorithm-lstm' || data.algorithm == 'algorithm-ffnn')
+                            displayparam();
 
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
 
@@ -1006,7 +1062,36 @@
                 isRealValueShown = !isRealValueShown;
                 updatePredictionDisplay();
             });
+            $('#viewParameters').click(function () {
+                var modelParameters = document.getElementById('modelParameters');
+                if (modelParameters.style.display === 'none') {
+                    modelParameters.style.display = 'block';
+                } else {
+                    modelParameters.style.display = 'none';
+                }
+            });
         });
+
+        function displayparam() {
+            var epoch = document.getElementById('epochDisplay');
+            var batchsize = document.getElementById('batchsizeDisplay');
+            var hiddenlayer = document.getElementById('hiddenlayerDisplay');
+            var split = document.getElementById('splitDisplay');
+            var neuron = document.getElementById('neuronDisplay');
+            var windowsize = document.getElementById('windowsizeDisplay');
+            var time = document.getElementById('timetrain');
+            document.getElementById('EpochBatchSize').style.display = 'flex';
+            epoch.textContent = predictionData.epochs;
+            batchsize.textContent = predictionData.batch_sizes;
+            document.getElementById('SplitHiddenlayer').style.display = 'flex';
+            hiddenlayer.textContent = predictionData.hidden_layers;
+            split.textContent = predictionData.split_ratio;
+            document.getElementById('neuronWindowsize').style.display = 'flex';
+            neuron.textContent = predictionData.hidden_neurons;
+            windowsize.textContent = predictionData.seq_size;
+
+            time.textContent = predictionData.time_predict;
+        }
 
         function updatePredictionDisplay() {
             var mseDisplay = document.getElementById('mseDisplay');

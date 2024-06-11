@@ -545,6 +545,7 @@ tr:hover {
 
 .selection-predict {
     background-color: #f0f0f0;
+    padding-bottom: 10px;
 }
 
 .chart {
@@ -852,17 +853,30 @@ tr:hover {
     margin-bottom: 10px;
     border: 0.5px solid #080808;
     border-radius: 5px;
+    box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.2);
 }
 
 #dodo {
     width: 50px;
 }
 
+#dodo1 {
+    width: 100px;
+    white-space: nowrap;
+}
+
 #mse,
 #rmse,
-#mae {
+#mae,
+#epoch,
+#batchsize,
+#split,
+#hiddenlayer,
+#windowsize,
+#neuron {
     margin-left: 10px;
     font-size: 15px;
+    user-select: none;
 }
 
 #maeDisplay,
@@ -885,6 +899,62 @@ tr:hover {
     background-color: #7ABA78;
     font-family: 'Montserrat', sans-serif;
     color: rgb(255, 255, 255);
+    user-select: none;
+}
+
+#viewParameters:hover {
+    background-color: #4e704e;
+}
+
+#EpochBatchSize,
+#SplitHiddenlayer,
+#neuronWindowsize {
+    display: flex;
+    /* justify-content: space-between; */
+    margin-left: 43px;
+    margin-right: 47px;
+    margin-top: 10px;
+    height: 30px;
+}
+
+#epochcontainer,
+#batchsizecontainer,
+#hiddenlayercontainer,
+#splitcontainer,
+#windowsizecontainer,
+#neuroncontainer {
+    align-items: center;
+    flex: 1;
+    /* justify-content: space-between; */
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(120, 171, 168, 0.3);
+    box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.1);
+}
+
+#epochcontainer div,
+#batchsizecontainer div,
+#hiddenlayercontainer div,
+#splitcontainer div,
+#windowsizecontainer div,
+#neuroncontainer div {
+    flex: 1;
+}
+
+#epochcontainer p,
+#batchsizecontainer p,
+#hiddenlayercontainer p,
+#splitcontainer p,
+#windowsizecontainer p,
+#neuroncontainer p {
+    flex: 1;
+}
+
+
+#batchsizecontainer,
+#hiddenlayercontainer,
+#windowsizecontainer {
+    margin-left: 10px;
 }
 
 /* Additional */

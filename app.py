@@ -14,7 +14,7 @@ import tensorflow as tf
 from werkzeug.utils import secure_filename
 import os
 from sklearn.metrics import mean_squared_error,mean_absolute_error
-
+import time
 
 app = Flask(__name__) # create an app instance
 
@@ -33,15 +33,15 @@ def load_data_new(file_path):
     df_final= df_numerical.dropna(axis=1)
     return df_final
 
-def scale_data_lstm(data):
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    return scaler.fit_transform(data)
-
 def scale_data(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
     return scaled_data, scaler
 
+def scale_data_original(test,predictions,scaler):
+    predictions_actual = scaler.inverse_transform(predictions.reshape(1, -1))
+    test_actual = scaler.inverse_transform(test.reshape(1, -1))
+    return predictions_actual, test_actual
 
 def split_data_default(data, split_ratio=0.8):
     train_size = int(len(data) * split_ratio)
@@ -161,10 +161,7 @@ def calculate_metrics(test, predictions):
     mae = mean_absolute_error(test, predictions)
     return mse, rmse, mae
 
-def scale_data_default(test,predictions,scaler):
-    predictions_actual = scaler.inverse_transform(predictions.reshape(1, -1))
-    test_actual = scaler.inverse_transform(test.reshape(1, -1))
-    return predictions_actual, test_actual
+
 
 def eda_model_FFNN(y,test_pred,column_prediction):
     plt.clf() 
@@ -287,7 +284,11 @@ def Predict():
     column_prediction = request.form.get('column_prediction')
     useExistingModel = request.form.get('useExistingModel') 
     model = None
-            
+    scaled_data = None  
+    scaler = None 
+    start_predict = 0
+    end_predict = 0    
+    time_predict = 0 
     if  algorithm == 'algorithm-ffnn':       
         if useExistingModel == 'on': # For existing model
             default_hidden_layers = 1
@@ -307,21 +308,27 @@ def Predict():
                     split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
                     # Check if the user wants to use an existing model
                     model_path = model_path_ffnn + 'FFNN_Model_Apple_Open.h5'
+                    
+                    start_predict = time.time()
                     model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
+                    end_predict = time.time()
+                    
                     x,y = to_sequences(test,1,18)
                     test_pred = model.predict(x)
                     testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
                     
-                    y_real, test_pred_real = scale_data_default(y,test_pred,scaler)                                         
+                    y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
                     testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
                     
+                    time_predict = end_predict - start_predict
                     eda_model_FFNN(y,test_pred,column_prediction)
                     return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                     testScore_mse=testScore_mse, testScore_rmse = testScore_rmse,testScore_mae = testScore_mae,
                                     testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
                                     hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, 
                                     hidden_layers=default_hidden_layers, epochs=default_epochs, 
-                                    batch_sizes=default_batch_size, split_ratio=default_split_ratio)                                      
+                                    batch_sizes=default_batch_size, split_ratio=default_split_ratio,
+                                    time_predict=time_predict)                                      
             elif global_name == 'AMAZON':
                 train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
             elif global_name == 'Weather_WS':
@@ -336,7 +343,8 @@ def Predict():
             x,y = to_sequences(test_datanew,1,seq_size_new)      
             test_pred = model.predict(x)
             testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
-            y_real, test_pred_real = scale_data_default(y,test_pred,scaler)                                         
+            
+            y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
             testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
             
             eda_model_FFNN(y,test_pred,column_prediction)
@@ -348,59 +356,156 @@ def Predict():
     elif algorithm == 'algorithm-lstm':
         if useExistingModel == 'on': 
             array_stock = list(["Open","High","Low","Close","Adj Close"])
+            epochs_lstm = 300
+            batch_sizes_lstm = 16
+            hidden_layers_lstm = 1
+            split_ratio_lstm = 0.8
+            
             if global_name == 'APPLE':
                 seq_size_lstm = 12
                 hidden_neurons_lstm = 5
-                output_lstm = 5
+                output_lstm = 5      
                 model_path_lstm = model_path_lstm + 'LSTM_APPLE.h5'
-                train, test = split_data_default(scale_data_lstm(global_data[array_stock]))                
+                scaled_data, scaler = scale_data(global_data[array_stock])
+                train, test = split_data_default(scaled_data)             
                 model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
                 testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
                 result_LSTM = model_lstm.predict(testX_LSTM) 
+                predict_LSTM_real = scaler.inverse_transform(result_LSTM)
+                textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
+                
                 if column_prediction == 'Open':                 
                         predict_LSTM_Open = result_LSTM[:,array_stock.index('Open')]
                         textY_LSTM_Open = testY_LSTM[:,array_stock.index('Open')]  
-                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Open, predict_LSTM_Open)
+                        testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Open, predict_LSTM_Open)                     
+                        
+                        predict_LSTM_Open_real = predict_LSTM_real[:,array_stock.index('Open')]
+                        textY_LSTM_Open_real = textY_LSTM_real[:,array_stock.index('Open')]                   
+                        testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_Open_real, predict_LSTM_Open_real)                      
+                        
                         eda_model_LSTM(textY_LSTM_Open,predict_LSTM_Open,column_prediction)
-                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)                             
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                       testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                       testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                       hidden_neurons = hidden_neurons_lstm, 
+                                       seq_size=seq_size_lstm, 
+                                       hidden_layers= hidden_layers_lstm,
+                                       epochs=epochs_lstm, 
+                                       batch_sizes=batch_sizes_lstm, 
+                                       split_ratio=split_ratio_lstm)
+                                                                    
                 elif column_prediction == 'High':
                         predict_LSTM_High = result_LSTM[:,array_stock.index('High')]
                         textY_LSTM_High = testY_LSTM[:,array_stock.index('High')]
                         testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_High, predict_LSTM_High)
+                        
+                        predict_LSTM_High_real = predict_LSTM_real[:,array_stock.index('High')]
+                        textY_LSTM_High_real = textY_LSTM_real[:,array_stock.index('High')]                   
+                        testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_High_real, predict_LSTM_High_real)                                              
+                        
                         eda_model_LSTM(textY_LSTM_High,predict_LSTM_High,column_prediction)
-                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                       testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                       testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                       hidden_neurons = hidden_neurons_lstm, 
+                                       seq_size=seq_size_lstm, 
+                                       hidden_layers= hidden_layers_lstm,
+                                       epochs=epochs_lstm, 
+                                       batch_sizes=batch_sizes_lstm, 
+                                       split_ratio=split_ratio_lstm)
+                                        
                 elif column_prediction == 'Low':
                         predict_LSTM_Low = result_LSTM[:,array_stock.index('Low')]
                         textY_LSTM_Low = testY_LSTM[:,array_stock.index('Low')]
                         testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Low, predict_LSTM_Low)
+                        
+                        predict_LSTM_Low_real = predict_LSTM_real[:,array_stock.index('Low')]
+                        textY_LSTM_Low_real = textY_LSTM_real[:,array_stock.index('Low')]
+                        testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_Low_real, predict_LSTM_Low_real)
+                        
                         eda_model_LSTM(textY_LSTM_Low,predict_LSTM_Low,column_prediction)
-                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                       testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                       testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                       hidden_neurons = hidden_neurons_lstm, 
+                                       seq_size=seq_size_lstm, 
+                                       hidden_layers= hidden_layers_lstm,
+                                       epochs=epochs_lstm, 
+                                       batch_sizes=batch_sizes_lstm, 
+                                       split_ratio=split_ratio_lstm)     
+                                   
                 elif column_prediction == 'Close':
                         predict_LSTM_Close = result_LSTM[:,array_stock.index('Close')]
                         textY_LSTM_Close = testY_LSTM[:,array_stock.index('Close')]
                         testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Close, predict_LSTM_Close)
+                        
+                        predict_LSTM_Close_real = predict_LSTM_real[:,array_stock.index('Close')]
+                        textY_LSTM_Close_real = textY_LSTM_real[:,array_stock.index('Close')]
+                        testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_Close_real, predict_LSTM_Close_real)
+                        
                         eda_model_LSTM(textY_LSTM_Close,predict_LSTM_Close,column_prediction)
-                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                       testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                       testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                       hidden_neurons = hidden_neurons_lstm, 
+                                       seq_size=seq_size_lstm, 
+                                       hidden_layers= hidden_layers_lstm,
+                                       epochs=epochs_lstm, 
+                                       batch_sizes=batch_sizes_lstm, 
+                                       split_ratio=split_ratio_lstm)
+                                        
                 elif column_prediction == 'Adj Close':
                         predict_LSTM_Adj_Close = result_LSTM[:,array_stock.index('Adj Close')]
                         textY_LSTM_Adj_Close = testY_LSTM[:,array_stock.index('Adj Close')]
                         testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Adj_Close, predict_LSTM_Adj_Close)
+                        
+                        predict_LSTM_Adj_Close_real = predict_LSTM_real[:,array_stock.index('Adj Close')]
+                        textY_LSTM_Adj_Close_real = textY_LSTM_real[:,array_stock.index('Adj Close')]
+                        testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_Adj_Close_real, predict_LSTM_Adj_Close_real)
+                        
                         eda_model_LSTM(textY_LSTM_Adj_Close,predict_LSTM_Adj_Close,column_prediction)
-                        return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+                        return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                                       testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                                       testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                                       hidden_neurons = hidden_neurons_lstm, 
+                                       seq_size=seq_size_lstm, 
+                                       hidden_layers= hidden_layers_lstm,
+                                       epochs=epochs_lstm, 
+                                       batch_sizes=batch_sizes_lstm, 
+                                       split_ratio=split_ratio_lstm)
+
         else: # Train a new model
             global array_column_new
             output_lstm_new = len(array_column_new)
-            split_ratio_lstm_new, hidden_neurons_lstm_new,seq_size_lstm_new, epochs_lstm_new, batch_sizes_lstm_new, hidden_layers_lstm_new = get_param_ffnn_datasetNew()                                
+            split_ratio_lstm_new, hidden_neurons_lstm_new,seq_size_lstm_new, epochs_lstm_new, batch_sizes_lstm_new, hidden_layers_lstm_new = get_param_ffnn_datasetNew()                                          
             
-            train_new, test_new = split_data_new(scale_data(global_data[array_column_new]),split_ratio_lstm_new)
+            scaled_data, scaler = scale_data(global_data[array_column_new])
+            train_new, test_new  = split_data_new(scaled_data,split_ratio_lstm_new)
+            
             model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new)
+            
             testX_LSTM_new, testY_LSTM_new = to_sequences_multivariate_lstm(test_new, seq_size_lstm_new)                               
-            result_LSTM_new = model_new.predict(testX_LSTM_new)                   
-            predict_LSTM_Open = result_LSTM_new[:,array_stock.index(column_prediction)]
-            textY_LSTM_Open = testY_LSTM_new[:,array_stock.index(column_prediction)]
+            result_LSTM_new = model_new.predict(testX_LSTM_new) 
+            predict_LSTM_real = scaler.inverse_transform(result_LSTM_new)
+            textY_LSTM_real = scaler.inverse_transform(testY_LSTM_new)   
+                                       
+            predict_LSTM_Open = result_LSTM_new[:,array_column_new.index(column_prediction)]
+            textY_LSTM_Open = testY_LSTM_new[:,array_column_new.index(column_prediction)]
+            predict_LSTM_Open_real = predict_LSTM_real[:,array_column_new.index(column_prediction)]
+            textY_LSTM_Open_real = textY_LSTM_real[:,array_column_new.index(column_prediction)]
+            
             testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM_Open, predict_LSTM_Open)
+            testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_Open_real, predict_LSTM_Open_real)
             eda_model_LSTM(textY_LSTM_Open,predict_LSTM_Open,column_prediction)
-            return jsonify(algorithm=algorithm, column_prediction=column_prediction, testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                           testScore_mse=testScore_mse, testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,  
+                           testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                           hidden_layers=hidden_layers_lstm_new,
+                           hidden_neurons=hidden_neurons_lstm_new, 
+                           seq_size=seq_size_lstm_new,
+                           epochs=epochs_lstm_new, 
+                           batch_sizes=batch_sizes_lstm_new, 
+                           split_ratio=split_ratio_lstm_new)
     else:
         return render_template('index.html', message="Please choose a model"), 400
 
