@@ -2,11 +2,9 @@ from flask import Flask
 from flask import *
 import numpy as np
 import pandas as pd
-from markupsafe import escape
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import datetime as dt
 from keras.models import Sequential 
 from keras.layers import Dense, LSTM 
 from sklearn.preprocessing import MinMaxScaler
@@ -15,6 +13,13 @@ from werkzeug.utils import secure_filename
 import os
 from sklearn.metrics import mean_squared_error,mean_absolute_error
 import time
+from statsmodels.tsa.api import VAR
+import pmdarima as pm
+import statsmodels.api as sm
+import warnings
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+
 
 app = Flask(__name__) # create an app instance
 
