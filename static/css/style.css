@@ -860,7 +860,8 @@ tr:hover {
     width: 50px;
 }
 
-#dodo1 {
+#dodo1,
+#dodolag {
     width: 100px;
     white-space: nowrap;
 }
@@ -873,8 +874,10 @@ tr:hover {
 #splitdata,
 #hiddenlayer,
 #windowsize,
-#neuron {
-    margin-left: 10px;
+#neuron,
+#orderlag,
+#splitdatavar {
+    margin-left: 5px;
     font-size: 15px;
     user-select: none;
 }
@@ -908,9 +911,9 @@ tr:hover {
 
 #EpochBatchSize,
 #SplitHiddenlayer,
-#neuronWindowsize {
+#neuronWindowsize,
+#lagOrderContainer {
     display: flex;
-    /* justify-content: space-between; */
     margin-left: 43px;
     margin-right: 47px;
     margin-top: 10px;
@@ -922,7 +925,9 @@ tr:hover {
 #hiddenlayercontainer,
 #splitcontainer,
 #windowsizecontainer,
-#neuroncontainer {
+#neuroncontainer,
+#splitvarcontainer,
+#ordercontainer {
     align-items: center;
     flex: 1;
     /* justify-content: space-between; */
@@ -932,12 +937,18 @@ tr:hover {
     box-shadow: 0px 10px 10px rgba(0, 0, 0, 0.1);
 }
 
+#dodolag {
+    margin-right: 5px;
+}
+
 #epochcontainer div,
 #batchsizecontainer div,
 #hiddenlayercontainer div,
 #splitcontainer div,
 #windowsizecontainer div,
-#neuroncontainer div {
+#neuroncontainer div,
+#splitvarcontainer div,
+#ordercontainer div {
     flex: 1;
 }
 
@@ -946,14 +957,17 @@ tr:hover {
 #hiddenlayercontainer p,
 #splitcontainer p,
 #windowsizecontainer p,
-#neuroncontainer p {
+#neuroncontainer p,
+#splitvarcontainer p,
+#ordercontainer p {
     flex: 1;
 }
 
 
 #batchsizecontainer,
 #hiddenlayercontainer,
-#windowsizecontainer {
+#windowsizecontainer,
+#ordercontainer {
     margin-left: 10px;
 }
 

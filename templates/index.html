@@ -1007,7 +1007,20 @@
                             <p id="windowsizeDisplay" style="margin-left: 5px;"></p>
                         </div>
                     </div>
-
+                    <div id="lagOrderContainer" style="display: none;">
+                        <div id="splitvarcontainer" style="display: flex;">
+                            <div id="dodolag">
+                                <p id="splitdatavar">Split data:</p>
+                            </div>
+                            <p id="splitvarDisplay"></p>
+                        </div>
+                        <div id="ordercontainer" style="display: flex;">
+                            <div id="dodolag">
+                                <p id="orderlag">Order of lags:</p>
+                            </div>
+                            <p id="orderDisplay" style="margin-left: 5px;"></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1049,12 +1062,12 @@
                         console.log('Column prediction:', data.column_prediction);
                         predictionStatus.textContent = 'Successfully predicted...';
                         document.getElementById('infor_predict').style.display = 'block';
-
                         predictionData = data;
                         updatePredictionDisplay();
                         if (data.algorithm == 'algorithm-lstm' || data.algorithm == 'algorithm-ffnn')
-                            displayparam();
-
+                            displayparam_ffnn();
+                        if (data.algorithm == 'algorithm-var')
+                            displayparam_var();
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
 
                     },
@@ -1081,15 +1094,13 @@
                 }
             });
         });
-        function displayparam() {
+        function displayparam_ffnn() {
             var epoch = document.getElementById('epochDisplay');
             var batchsize = document.getElementById('batchsizeDisplay');
             var hiddenlayer = document.getElementById('hiddenlayerDisplay');
             var split = document.getElementById('splitDisplay');
             var neuron = document.getElementById('neuronDisplay');
             var windowsize = document.getElementById('windowsizeDisplay');
-            var time_train = document.getElementById('timetrainDisplay');
-            var time_test = document.getElementById('timetestDisplay');
             document.getElementById('EpochBatchSize').style.display = 'flex';
             epoch.textContent = predictionData.epochs;
             batchsize.textContent = predictionData.batch_sizes;
@@ -1100,6 +1111,19 @@
             neuron.textContent = predictionData.hidden_neurons;
             windowsize.textContent = predictionData.seq_size;
 
+            var time_train = document.getElementById('timetrainDisplay');
+            var time_test = document.getElementById('timetestDisplay');
+            time_train.textContent = predictionData.time_train + ' (s)';
+            time_test.textContent = predictionData.time_predict + ' (s)';
+        }
+        function displayparam_var() {
+            var orderlag = document.getElementById('orderDisplay');
+            var splitvar = document.getElementById('splitvarDisplay');
+            document.getElementById('lagOrderContainer').style.display = 'flex';
+            orderlag.textContent = predictionData.p;
+            splitvar.textContent = predictionData.split_ratio;
+            var time_train = document.getElementById('timetrainDisplay');
+            var time_test = document.getElementById('timetestDisplay');
             time_train.textContent = predictionData.time_train + ' (s)';
             time_test.textContent = predictionData.time_predict + ' (s)';
         }

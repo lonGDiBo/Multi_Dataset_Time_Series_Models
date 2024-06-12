@@ -24,10 +24,7 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning
 app = Flask(__name__) # create an app instance
 
 
-
-from flask import abort, redirect, url_for
-
-
+#---------------------------------- LOAD DATA ---------------------------------
 def load_data(file_path):
     data = pd.read_csv(file_path)
     return data
@@ -37,7 +34,8 @@ def load_data_new(file_path):
     df_numerical = data.select_dtypes(include=[float, int])
     df_final= df_numerical.dropna(axis=1)
     return df_final
-
+#---------------------------------- END LOAD DATA ---------------------------------
+#---------------------------------- START SCALE DATA ---------------------------------
 def scale_data(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
@@ -48,6 +46,13 @@ def scale_data_original(test,predictions,scaler):
     test_actual = scaler.inverse_transform(test.reshape(1, -1))
     return predictions_actual, test_actual
 
+def scale_data_original_var(column_prediction,arrayData,scaler,result_var,test):
+    testPredict_var_real = scaler.inverse_transform(np.array(result_var))[:,arrayData.index(column_prediction)]
+    test_var_real = scaler.inverse_transform(test)[:,arrayData.index(column_prediction)]
+    return testPredict_var_real, test_var_real
+
+#---------------------------------- END SCALE DATA ---------------------------------
+#---------------------------------- START SPLIT DATA --------------------------------
 def split_data_default(data, split_ratio=0.8):
     train_size = int(len(data) * split_ratio)
     train, test = data[:train_size], data[train_size:]
@@ -58,7 +63,8 @@ def split_data_new(data, split_ratio):
     train_size = int(len(data) * split_ratio)
     train, test = data[:train_size], data[train_size:]
     return train, test
-
+#---------------------------------- END SPLIT DATA --------------------------------
+#---------------------------------- Create time series sequences --------------------
 def to_sequences(dataset,timestep , seq_size=1): 
     x = []
     y = []
@@ -88,7 +94,9 @@ def to_sequences_multivariate_lstm(dataset,p):
     x = np.array(x)
     y = np.array(y)
     return x.reshape(x.shape[0], x.shape[1] * x.shape[2]),y.reshape(y.shape[0], y.shape[2])
-
+#---------------------------------- END Create time series sequences -----------------
+#---------------------------------- START VARNN ---------------------------------
+#---------------------------------- END VARNN -----------------------------------
 # ----------------------------------START FFNN ----------------------------------
 def model_ffnn_exist(seq_size, hidden_neurons, weights_file):
     model = Sequential()
@@ -158,7 +166,7 @@ def LSTM_new( train,test,outputs,seq,hidden_neural,epochs,batch_size,hidden_laye
     model_LSTM.fit(trainX_LSTM, trainY_LSTM, validation_data=(testX_LSTM, testY_LSTM), verbose=0, epochs=epochs, batch_size=batch_size)
     return model_LSTM
 
-def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayValue,column_prediction):
+def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayValue,column_prediction,alogrithm):
     predict_LSTM = result_LSTM[:,arrayValue.index(column_prediction)]
     textY_LSTM = testY_LSTM[:,arrayValue.index(column_prediction)]  
     testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM, predict_LSTM)                     
@@ -166,10 +174,65 @@ def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayV
     predict_LSTM_real = predict_LSTM_real[:,arrayValue.index(column_prediction)]
     textY_LSTM_real = textY_LSTM_real[:,arrayValue.index(column_prediction)]                   
     testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_real, predict_LSTM_real)                      
-    eda_model_LSTM(textY_LSTM,predict_LSTM,column_prediction)
+    eda_model(textY_LSTM,predict_LSTM,column_prediction,alogrithm)
     return testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real
 
+#---------------------------------- END LSTM ----------------------------------
+#---------------------------------- VAR ----------------------------------
+def VAR_exist(train,p):
+    model_var = VAR(train)
+    result =  model_var.fit(p)
+    return model_var, result
 
+def VAR_New(train,test,p_max):
+    mse = 999
+    p_optimize = 0
+    for p in range(1,p_max+1):
+        a = [] 
+        model = VAR(train)
+        result = model.fit(p)
+        b=train[:]
+        for j in range(len(test)):
+            forecast = result.forecast(b[-p:], steps=1)
+            a.append(forecast[0])
+            b=np.append(b,[test[j]], axis=0)
+        if mse > mean_squared_error(test, np.array(a)):
+            mse = mean_squared_error(test, np.array(a))
+            p_optimize = p
+    
+    model_var = VAR(train)
+    result_pop = model_var.fit(p_optimize)
+    return model_var, result_pop,p_optimize
+
+def Extract_test_predict_var(column_prediction,arrayData,result_var,test):
+    index = arrayData.index(column_prediction)
+    predict_var = [result[index] for result in result_var]
+    test_var = [t[index] for t in test]
+    predict_var = np.array(predict_var)
+    test_var = np.array(test_var)
+    return predict_var,test_var
+
+def VAR_forecast(train,test,result,p):
+    result_var=[]
+    b=train[:]
+    for i in range(len(test)):
+        forecast_var = result.forecast(b[-p:], steps=1)
+        result_var.append(forecast_var[0])
+        b=np.append(b,[test[i]], axis=0)
+    return result_var
+
+def get_Var_param():
+    split_ratio_get = global_parameters.get('splitdata')
+    if split_ratio_get == 'split73':
+       split_ratio = 0.7
+    else:
+       split_ratio = 0.8
+    orderlags = int(global_parameters.get('Max_lag_order_p_'))
+    return split_ratio,orderlags
+
+#---------------------------------- END VAR ----------------------------------
+#---------------------------------- ARIMA ----------------------------------
+#---------------------------------- END ARIMA ----------------------------------
 def calculate_metrics(test, predictions):
     mse = mean_squared_error(test, predictions)
     rmse = np.sqrt(mse)
@@ -177,24 +240,27 @@ def calculate_metrics(test, predictions):
     return mse, rmse, mae
 
 
-
-def eda_model_FFNN(y,test_pred,column_prediction):
+#---------------------------------- START EDA ----------------------------------
+def eda_model(y,test_pred,column_prediction,alogrithm):
+    global global_name
     plt.clf() 
     plt.plot(y,label="Actual value")
     plt.plot(test_pred,label="Predicted value")
-    plt.title('FFNN Predictions of {} Values Compared to Actuals'.format(column_prediction))
+    if alogrithm == 'algorithm-ffnn':
+        plt.title('FFNN Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
+    elif alogrithm == 'algorithm-lstm':
+        plt.title('LSTM Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
+    elif alogrithm == 'algorithm-var':
+        plt.title('VAR Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
+    elif alogrithm == 'algorithm-varnn':
+        plt.title('VARNN Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
+    else:
+        plt.title('ARIMA Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
     plt.legend()
     plt.savefig('static/images/plot_predict.png')
 
-def eda_model_LSTM(y,predict_LSTM_Open,column_prediction):
-    plt.clf() 
-    plt.plot(y,label="Actual value")
-    plt.plot(predict_LSTM_Open,label="Predicted value")
-    plt.title('LSTM Predictions of {} Values Compared to Actuals'.format(column_prediction))
-    plt.legend()
-    plt.savefig('static/images/plot_predict.png')
     
-
+#---------------------------------- END EDA ----------------------------------
 @app.route('/')
 def index():
     return render_template('login.html')
@@ -287,11 +353,14 @@ def eda_data():
 def Predict():
     global global_data 
     global global_name
+    global array_column_new
     algorithm =None
     column_prediction = None
     useExistingModel = None
     train = []
     test = []
+    train_new = []
+    test_new = []
     testScore_mse = 0
     testScore_rmse = 0
     testScore_mae = 0
@@ -313,6 +382,17 @@ def Predict():
     start_predict = 0
     end_predict = 0    
     time_predict = 0 
+    # Param FFNN
+    test_pred = None
+    x = None
+    y = None
+    y_real = None
+    test_pred_real = None
+
+    array_stock = list(["Open","High","Low","Close","Adj Close"])
+    array_WS = list(["Pressure","Temperature","Saturation_vapor_pressure","Vapor_pressure_deficit","Specific_humidity","Airtight","Wind_speed"])
+    array_HCM = list(["max","min","wind","rain","humidi","pressure"])
+#-----------FFNN-------------------
     if  algorithm == 'algorithm-ffnn':       
         if useExistingModel == 'on': # For existing model
             default_hidden_layers = 1
@@ -348,7 +428,7 @@ def Predict():
                     
                     time_train = round(end_train - start_train, 5)
                     time_predict = round(end_predict - start_predict, 5)
-                    eda_model_FFNN(y,test_pred,column_prediction)
+                    eda_model(y,test_pred,column_prediction,algorithm)
                     return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                     testScore_mse=testScore_mse, testScore_rmse = testScore_rmse,testScore_mae = testScore_mae,
                                     testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
@@ -380,7 +460,7 @@ def Predict():
             y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
             testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
             
-            eda_model_FFNN(y,test_pred,column_prediction)
+            eda_model(y,test_pred,column_prediction,algorithm)
             
             time_train = round(end_train - start_train, 5)
             time_predict = round(end_predict - start_predict, 5)
@@ -390,9 +470,9 @@ def Predict():
                            hidden_neurons=hidden_neurons_new, seq_size=seq_size_new, hidden_layers=hidden_layers_new, 
                            epochs=epochs_new, batch_sizes=batch_sizes_new, split_ratio=split_ratio_new,
                            time_train = time_train,time_predict = time_predict)     
+#-----------LSTM-------------------   
     elif algorithm == 'algorithm-lstm':
         if useExistingModel == 'on': 
-            array_stock = list(["Open","High","Low","Close","Adj Close"])
             epochs_lstm = 300
             batch_sizes_lstm = 16
             hidden_layers_lstm = 1
@@ -421,7 +501,7 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5) 
                                                              
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction,algorithm)
                 
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction,
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
@@ -456,7 +536,7 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5) 
                                                              
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction,algorithm)
                 
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction,
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
@@ -477,7 +557,7 @@ def Predict():
                 train, test = split_data_default(scaled_data)    
                 
                 start_train = time.time()         
-                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
+                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm,algorithm)
                 end_train = time.time()
                 
                 testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
@@ -491,7 +571,7 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5) 
                                                              
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction,algorithm)
                 
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction,
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
@@ -504,7 +584,6 @@ def Predict():
                                 split_ratio=split_ratio_lstm,
                                 time_train = time_train,time_predict = time_predict)            
         else: # Train a new model or use a new dataset
-            global array_column_new
             output_lstm_new = len(array_column_new)
             split_ratio_lstm_new, hidden_neurons_lstm_new,seq_size_lstm_new, epochs_lstm_new, batch_sizes_lstm_new, hidden_layers_lstm_new = get_param_ffnn_datasetNew()                                          
             
@@ -512,7 +591,7 @@ def Predict():
             train_new, test_new  = split_data_new(scaled_data,split_ratio_lstm_new)
             
             start_train = time.time()
-            model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new)
+            model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new,algorithm)
             end_train = time.time()
             
             testX_LSTM_new, testY_LSTM_new = to_sequences_multivariate_lstm(test_new, seq_size_lstm_new)                               
@@ -523,7 +602,7 @@ def Predict():
             
             predict_LSTM_real = scaler.inverse_transform(result_LSTM_new)
             textY_LSTM_real = scaler.inverse_transform(testY_LSTM_new)   
-            testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM_new,testY_LSTM_new,predict_LSTM_real,textY_LSTM_real,array_column_new,column_prediction)
+            testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM_new,testY_LSTM_new,predict_LSTM_real,textY_LSTM_real,array_column_new,column_prediction,algorithm)
             time_train = round(end_train - start_train, 5)
             time_predict = round(end_predict - start_predict, 5)
                         
@@ -537,6 +616,74 @@ def Predict():
                            batch_sizes=batch_sizes_lstm_new, 
                            split_ratio=split_ratio_lstm_new,
                            time_train = time_train,time_predict = time_predict)
+    elif algorithm == 'algorithm-var':
+        if useExistingModel == 'on':
+            array_temp = []
+            p = None
+            if global_name == 'AMAZON' or global_name == 'GOOGLE':
+                p =1
+                array_temp = array_stock                
+            elif global_name == 'APPLE':
+                p = 2
+                array_temp = array_stock
+            elif global_name == 'Weather_WS':
+                p = 11
+                array_temp = array_WS
+            else:
+                p = 14
+                array_temp = array_HCM
+            
+            scaled_data, scaler = scale_data(global_data[array_temp])
+            train, test = split_data_default(scaled_data)            
+            start_train = time.time()
+            model_var, result = VAR_exist(train,p)
+            end_train = time.time()
+            
+            start_predict = time.time()
+            result_var = VAR_forecast(train,test,result,p)
+            end_predict = time.time()
+            
+            predict_var,test_var = Extract_test_predict_var(column_prediction, array_temp, result_var, test)
+            predict_var_real,test_var_real = scale_data_original_var(column_prediction, array_temp, scaler, result_var, test)
+            
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(test_var, predict_var)
+            testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(test_var_real, predict_var_real)
+            
+            time_train = round(end_train - start_train, 5)
+            time_predict = round(end_predict - start_predict, 5)
+            eda_model(test_var,predict_var,column_prediction,algorithm)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                            testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                            testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                            p=p,split_ratio=0.8,
+                            time_train = time_train,time_predict = time_predict) 
+        else:
+            split_ratio_var_new, p_max = get_Var_param()
+            scaled_data, scaler = scale_data(global_data[array_column_new])
+            train_new, test_new  = split_data_new(scaled_data,split_ratio_var_new)
+                       
+            start_train = time.time()
+            model_var, result_new,p_optimize = VAR_New(train_new,test_new,p_max)
+            end_train = time.time()
+            
+            start_predict = time.time()
+            result_var_new = VAR_forecast(train_new,test_new,result_new,p_optimize)
+            end_predict = time.time()
+                        
+            predict_var_new,test_var_new = Extract_test_predict_var(column_prediction, array_column_new, result_var_new, test_new)
+            predict_var_new_real,test_var_new_real = scale_data_original_var(column_prediction, array_column_new, scaler, result_var_new, test_new)
+            
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(test_var_new, predict_var_new)
+            testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(test_var_new_real, predict_var_new_real)
+            
+            time_train = round(end_train - start_train, 5)
+            time_predict = round(end_predict - start_predict, 5)    
+            eda_model(test_var_new,predict_var_new,column_prediction,algorithm)        
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                            testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                            testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                            p=p_optimize,split_ratio=split_ratio_var_new,
+                            time_train = time_train,time_predict = time_predict) 
     else:
         return render_template('index.html', message="Please choose a model"), 400
 
