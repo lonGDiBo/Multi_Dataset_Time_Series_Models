@@ -96,6 +96,64 @@ def to_sequences_multivariate_lstm(dataset,p):
     return x.reshape(x.shape[0], x.shape[1] * x.shape[2]),y.reshape(y.shape[0], y.shape[2])
 #---------------------------------- END Create time series sequences -----------------
 #---------------------------------- START VARNN ---------------------------------
+def VARNN_exist(trainX,outputs,p,hidden_neural,file_path):
+    num_outputs = outputs
+    ffnn_model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=(p, num_outputs)),  
+        tf.keras.layers.Dense(hidden_neural, activation='relu'),
+    ])
+    var_model = tf.keras.layers.Dense(num_outputs)
+    # Create custom model
+    class CustomModel(tf.keras.Model):
+        def __init__(self, ffnn_model, var_model):
+            super(CustomModel, self).__init__()
+            self.ffnn_model = ffnn_model
+            self.var_model = var_model
+        def call(self, inputs):
+            ffnn_output = self.ffnn_model(inputs)
+            var_output = self.var_model(ffnn_output)
+            return var_output
+    # Create custom model instance
+    custom_model = CustomModel(ffnn_model, var_model)
+    # Compile custom model
+    custom_model.compile(optimizer='adam', loss='mse')
+    dummy_input = trainX  # Cung cấp dữ liệu giả
+    a = custom_model(dummy_input)
+    custom_model.load_weights(file_path)
+    return custom_model
+
+def VARNN_new(outputs,p,hidden_neural,trainX,trainY,epochs,batch_size):
+    num_outputs = outputs
+    ffnn_model = tf.keras.models.Sequential([
+        tf.keras.layers.Flatten(input_shape=(p, num_outputs)), 
+        tf.keras.layers.Dense(hidden_neural, activation='relu'),
+    ])
+    var_model = tf.keras.layers.Dense(num_outputs)
+    class CustomModel(tf.keras.Model):
+        def __init__(self, ffnn_model, var_model):
+            super(CustomModel, self).__init__()
+            self.ffnn_model = ffnn_model
+            self.var_model = var_model
+
+        def call(self, inputs):
+            ffnn_output = self.ffnn_model(inputs)
+            var_output = self.var_model(ffnn_output)
+            return var_output
+    custom_model = CustomModel(ffnn_model, var_model)
+    custom_model.compile(optimizer='adam', loss='mse')
+    custom_model.fit(trainX, trainY, verbose=0,epochs=epochs, batch_size=batch_size, validation_split=0.2)
+    return custom_model
+def get_param_VARNN_datasetNew():
+   split_ratio_get = global_parameters.get('splitdata')
+   if split_ratio_get == 'split73':
+       split_ratio = 0.7
+   else:
+       split_ratio = 0.8
+   hidden_neurons = int(global_parameters.get('Hidden_Neurons'))
+   lagOrder = int(global_parameters.get('Lag_order_p_'))
+   epochs = int(global_parameters.get('Epoch'))
+   batch_sizes = int(global_parameters.get('Batch_size'))
+   return split_ratio, hidden_neurons,lagOrder,epochs,batch_sizes
 #---------------------------------- END VARNN -----------------------------------
 # ----------------------------------START FFNN ----------------------------------
 def model_ffnn_exist(seq_size, hidden_neurons, weights_file):
@@ -354,6 +412,7 @@ def Predict():
     global global_data 
     global global_name
     global array_column_new
+    
     algorithm =None
     column_prediction = None
     useExistingModel = None
@@ -367,11 +426,13 @@ def Predict():
     testScore_mse_real = 0
     testScore_rmse_real = 0
     testScore_mae_real = 0
+    
     model_path_apple = 'Model/Apple/'
     model_path_amazon = 'Model/Amazon/'
     model_path_google = 'Model/Google/'
     model_path_WS = 'Model/DUC-WS/'
     model_path_HCM = 'Model/weather-HCM/'
+    
     algorithm = request.form.get('algorithm')
     column_prediction = request.form.get('column_prediction')
     useExistingModel = request.form.get('useExistingModel') 
@@ -399,7 +460,15 @@ def Predict():
     # Param LSTM
     model_path_lstm = None
     model_lstm = None
-    
+    # Param VARNN
+    model_path_varnn = None
+    model_varnn = None
+    p_lag  = None
+    output_varnn = None
+    hidden_neurons_varnn = None
+    epochs_varnn = None
+    batch_sizes_varnn =  None
+        
     array_temp = []
     array_stock = list(["Open","High","Low","Close","Adj Close"])
     array_WS = list(["Pressure","Temperature","Saturation_vapor_pressure","Vapor_pressure_deficit","Specific_humidity","Airtight","Wind_speed"])
@@ -725,6 +794,7 @@ def Predict():
                            batch_sizes=batch_sizes_lstm_new, 
                            split_ratio=split_ratio_lstm_new,
                            time_train = time_train,time_predict = time_predict)
+#-----------VAR-------------------    
     elif algorithm == 'algorithm-var':
         if useExistingModel == 'on':
             p = None
@@ -792,6 +862,102 @@ def Predict():
                             testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
                             p=p_optimize,split_ratio=split_ratio_var_new,
                             time_train = time_train,time_predict = time_predict) 
+#-----------VARNN----------------    
+    elif algorithm == 'algorithm-varnn':
+        if useExistingModel == 'on': 
+            if global_name == 'AMAZON':
+                array_temp = array_stock
+                p_lag = 3
+                output_varnn = 5
+                hidden_neurons_varnn = 20
+                epochs_varnn = 550
+                batch_sizes_varnn =  32
+                model_path_varnn = model_path_amazon + 'VARNN/VARNN_AMAZON.h5'
+            elif global_name == 'GOOGLE':
+                array_temp = array_stock
+                p_lag = 28
+                output_varnn = 5
+                hidden_neurons_varnn = 9
+                epochs_varnn = 550
+                batch_sizes_varnn =  32
+                model_path_varnn = model_path_google + 'VARNN/VARNN_GOOGLE.h5'
+            elif global_name == 'APPLE':
+                array_temp = array_stock
+                p_lag = 17
+                output_varnn = 5
+                hidden_neurons_varnn = 15
+                epochs_varnn = 550
+                batch_sizes_varnn =  32
+                model_path_varnn = model_path_google + 'VARNN/VARNN_APPLE.h5'    
+            elif global_name == 'Weather_WS':
+                array_temp = array_WS
+                p_lag = 7
+                output_varnn = 7
+                hidden_neurons_varnn = 16
+                epochs_varnn = 200
+                batch_sizes_varnn =  64
+                model_path_varnn = model_path_WS + 'VARNN/VARNN_WS.h5'
+            else:
+                array_temp = array_HCM
+                p_lag = 16
+                output_varnn = 6
+                hidden_neurons_varnn = 40
+                epochs_varnn = 400
+                batch_sizes_varnn =  64
+                model_path_varnn = model_path_HCM + 'VARNN/VARNN_HCM.h5'   
+                              
+            scaled_data, scaler = scale_data(global_data[array_temp])
+            train, test = split_data_default(scaled_data)
+            
+            trainX, trainY = to_sequences_multivariate_varnn(train,p_lag)
+            testX, testY = to_sequences_multivariate_varnn(test,p_lag)
+
+            start_train = time.time()
+            model_varnn = VARNN_exist(trainX,output_varnn,p_lag,hidden_neurons_varnn,model_path_varnn)
+            end_train = time.time()
+            
+            start_predict = time.time()
+            testPredict = model_varnn.predict(testX)
+            end_predict = time.time()
+            
+            testPredict_inverse = scaler.inverse_transform(testPredict)
+            testY_inverse = scaler.inverse_transform(testY)
+            
+            testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real= LSTM_Predict(testPredict,testY,testPredict_inverse,testY_inverse,array_temp,column_prediction,algorithm)
+            time_train = round(end_train - start_train, 5)
+            time_predict = round(end_predict - start_predict, 5)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                            testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                            testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                            p_lag=p_lag,split_ratio=0.8,hidden_neurons=hidden_neurons_varnn,epochs=epochs_varnn,batch_sizes=batch_sizes_varnn,
+                            time_train = time_train,time_predict = time_predict)
+        else:
+            output_varnn_new = len(array_column_new)
+            split_ratio_varnn_new, hidden_neurons_varnn_new, order_lag_var_new, epochs_varnn_new, batch_sizes_varnn_new = get_param_VARNN_datasetNew()
+            scaled_data, scaler = scale_data(global_data[array_column_new])
+            train_new, test_new = split_data_new(scaled_data,split_ratio_varnn_new)
+            trainX_new, trainY_new = to_sequences_multivariate_varnn(train_new,order_lag_var_new)
+            testX_new, testY_new = to_sequences_multivariate_varnn(test_new,order_lag_var_new)
+
+            start_train = time.time()
+            model_varnn_new = VARNN_new(output_varnn_new, order_lag_var_new, hidden_neurons_varnn_new,trainX_new,trainY_new, epochs_varnn_new, batch_sizes_varnn_new)
+            end_train = time.time()
+            
+            start_predict = time.time()
+            testPredict_new = model_varnn_new.predict(testX_new)
+            end_predict = time.time()
+            
+            testPredict_inverse_new = scaler.inverse_transform(testPredict_new)
+            testY_inverse_new = scaler.inverse_transform(testY_new)
+            
+            testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(testPredict_new,testY_new,testPredict_inverse_new,testY_inverse_new,array_column_new,column_prediction,algorithm)
+            time_train = round(end_train - start_train, 5)
+            time_predict = round(end_predict - start_predict, 5)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                            testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                            testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                            p_lag=order_lag_var_new,split_ratio=split_ratio_varnn_new,hidden_neurons=hidden_neurons_varnn_new,epochs=epochs_varnn_new,batch_sizes=batch_sizes_varnn_new,
+                            time_train = time_train,time_predict = time_predict)
     else:
         return render_template('index.html', message="Please choose a model"), 400
 

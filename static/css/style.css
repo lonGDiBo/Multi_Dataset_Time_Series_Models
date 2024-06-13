@@ -912,7 +912,9 @@ tr:hover {
 #EpochBatchSize,
 #SplitHiddenlayer,
 #neuronWindowsize,
-#lagOrderContainer {
+#lagOrderContainer,
+#neuronlagorder,
+#lagorderVarnnContainer {
     display: flex;
     margin-left: 43px;
     margin-right: 47px;
@@ -927,7 +929,8 @@ tr:hover {
 #windowsizecontainer,
 #neuroncontainer,
 #splitvarcontainer,
-#ordercontainer {
+#ordercontainer,
+#lagorderVarnnContainer {
     align-items: center;
     flex: 1;
     /* justify-content: space-between; */

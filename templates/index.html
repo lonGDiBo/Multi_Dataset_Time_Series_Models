@@ -992,7 +992,6 @@
                             <p id="batchsizeDisplay"></p>
                         </div>
                     </div>
-
                     <div id="neuronWindowsize" style="display: none ">
                         <div id="epochcontainer" style="display: flex;">
                             <div id="dodo1">
@@ -1002,11 +1001,18 @@
                         </div>
                         <div id="windowsizecontainer" style="display: flex;">
                             <div id="dodo1">
-                                <p id="windowsize">Window size: </p>
+                                <p id="windowsize">Order: </p>
                             </div>
                             <p id="windowsizeDisplay" style="margin-left: 5px;"></p>
                         </div>
                     </div>
+                    <div id="lagorderVarnnContainer" style="display: none ">
+                        <div id="dodolag">
+                            <p id="orderlag">Order of lags:</p>
+                        </div>
+                        <p id="lagordervarnnDisplay" style="margin-left: 5px;"></p>
+                    </div>
+
                     <div id="lagOrderContainer" style="display: none;">
                         <div id="splitvarcontainer" style="display: flex;">
                             <div id="dodolag">
@@ -1050,7 +1056,9 @@
                 document.getElementById('SplitHiddenlayer').style.display = 'none';
                 document.getElementById('neuronWindowsize').style.display = 'none';
                 document.getElementById('lagOrderContainer').style.display = 'none';
+                document.getElementById('lagorderVarnnContainer').style.display = 'none';
                 // Show the prediction status and update its text
+                document.getElementById('hiddenlayer').textContent = 'Layers:';
                 var predictionStatus = document.getElementById('predictionStatus');
                 predictionStatus.style.display = 'block';
                 predictionStatus.textContent = ' Currently in the process of predicting...';
@@ -1073,6 +1081,9 @@
                             displayparam_ffnn();
                         if (data.algorithm == 'algorithm-var')
                             displayparam_var();
+                        if (data.algorithm == 'algorithm-varnn')
+                            displayparam_varnn();
+
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
 
                     },
@@ -1121,12 +1132,37 @@
             time_train.textContent = predictionData.time_train + ' (s)';
             time_test.textContent = predictionData.time_predict + ' (s)';
         }
+        function displayparam_varnn() {
+            var epoch = document.getElementById('epochDisplay');
+            var batchsize = document.getElementById('batchsizeDisplay');
+            var hiddenlayer = document.getElementById('hiddenlayerDisplay');
+            var split = document.getElementById('splitDisplay');
+            var order = document.getElementById('lagordervarnnDisplay');
+            var neuronchange = document.getElementById('hiddenlayer');
+            document.getElementById('EpochBatchSize').style.display = 'flex';
+            epoch.textContent = predictionData.epochs;
+            batchsize.textContent = predictionData.batch_sizes;
+
+            document.getElementById('SplitHiddenlayer').style.display = 'flex';
+            hiddenlayer.textContent = predictionData.hidden_neurons;
+            neuronchange.textContent = 'Neurons:'
+            split.textContent = predictionData.split_ratio;
+
+            document.getElementById('lagorderVarnnContainer').style.display = 'flex';
+            order.textContent = predictionData.p_lag;
+
+            var time_train = document.getElementById('timetrainDisplay');
+            var time_test = document.getElementById('timetestDisplay');
+            time_train.textContent = predictionData.time_train + ' (s)';
+            time_test.textContent = predictionData.time_predict + ' (s)';
+        }
         function displayparam_var() {
             var orderlag = document.getElementById('orderDisplay');
             var splitvar = document.getElementById('splitvarDisplay');
             document.getElementById('lagOrderContainer').style.display = 'flex';
             orderlag.textContent = predictionData.p;
             splitvar.textContent = predictionData.split_ratio;
+
             var time_train = document.getElementById('timetrainDisplay');
             var time_test = document.getElementById('timetestDisplay');
             time_train.textContent = predictionData.time_train + ' (s)';

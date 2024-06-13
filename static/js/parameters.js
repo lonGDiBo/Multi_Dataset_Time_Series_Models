@@ -1,8 +1,8 @@
 
-var varnnParameters = ['Epoch', 'Batch size', 'p', 'Hidden Neurons'];
+var varnnParameters = ['Epoch', 'Batch size', 'Lag order(p)', 'Hidden Neurons'];
 var ffnnParameters = ['Epoch', 'Batch size', 'Data window size', 'Hidden Neurons', 'Hidden Layers'];
 var lstmParameters = ['Epoch', 'Batch size', 'Data window size', 'Hidden Neurons', 'Hidden Layers'];
-var varParameters = ['Max lag order(p)',];
+var varParameters = ['Max lag order(p)'];
 var arimaParameters = ['Autoregressive order (p)', 'Differencing order (d)', 'Moving average order (q)'];
 
 var defaultParameters = {
