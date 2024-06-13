@@ -888,7 +888,7 @@ def Predict():
                 hidden_neurons_varnn = 15
                 epochs_varnn = 550
                 batch_sizes_varnn =  32
-                model_path_varnn = model_path_google + 'VARNN/VARNN_APPLE.h5'    
+                model_path_varnn = model_path_apple + 'VARNN/VARNN_APPLE.h5'    
             elif global_name == 'Weather_WS':
                 array_temp = array_WS
                 p_lag = 7

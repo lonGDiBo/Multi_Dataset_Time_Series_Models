@@ -441,7 +441,6 @@
             $("#eda-form").submit(function (e) {
                 e.preventDefault();
                 var column = $("#column-input").val();
-                console.log('ten cot:', column);
                 $.post("/eda_column", { column: column }, function (data) {
 
                     $("#selected-column").text("You have selected column name: " + data.column_name);
@@ -603,7 +602,6 @@
                         body: JSON.stringify(selectedColumns),
                     })
                         .then(response => response.json())
-                        .then(data => console.log(data))
                         .catch((error) => {
                             console.error('Error:', error);
                         });
@@ -670,7 +668,8 @@
                     <div class="container-choosepara">
                         <div class="item left">
                             <div id="split-selection" style="display: flex; align-items: center;">
-                                <select id="split" name="splitdata" style="width: 200px; height: 45px;">
+                                <select id="split" name="splitdata"
+                                    style="width: 200px; height: 45px; border-radius: 1rem;">
                                     <option value="">Choose a data splitting</option>
                                     <option value="split82">8/2</option>
                                     <option value="split73">7/3</option>
@@ -731,7 +730,6 @@
                     if (algorithm !== '') {
                         updateModalParameters(dataset, column, algorithm);
                     }
-                    console.log(dataset, column, algorithm);
                 });
 
 
@@ -1071,8 +1069,6 @@
                         'useExistingModel': useExistingModel
                     },
                     success: function (data) {
-                        console.log('Algorithm:', data.algorithm);
-                        console.log('Column prediction:', data.column_prediction);
                         predictionStatus.textContent = 'Successfully predicted...';
                         document.getElementById('infor_predict').style.display = 'block';
                         predictionData = data;
