@@ -370,10 +370,12 @@ def Predict():
     model_path_apple = 'Model/Apple/'
     model_path_amazon = 'Model/Amazon/'
     model_path_google = 'Model/Google/'
+    model_path_WS = 'Model/DUC-WS/'
+    model_path_HCM = 'Model/weather-HCM/'
     algorithm = request.form.get('algorithm')
     column_prediction = request.form.get('column_prediction')
     useExistingModel = request.form.get('useExistingModel') 
-    model = None
+    
     scaled_data = None  
     scaler = None 
     start_train = 0
@@ -383,12 +385,22 @@ def Predict():
     end_predict = 0    
     time_predict = 0 
     # Param FFNN
+    model = None
+    model_path_ffnn = None
+    default_hidden_neurons = None
+    default_seq_size = None
+    default_epochs = None
+    default_batch_size = None 
     test_pred = None
     x = None
     y = None
     y_real = None
     test_pred_real = None
-
+    # Param LSTM
+    model_path_lstm = None
+    model_lstm = None
+    
+    array_temp = []
     array_stock = list(["Open","High","Low","Close","Adj Close"])
     array_WS = list(["Pressure","Temperature","Saturation_vapor_pressure","Vapor_pressure_deficit","Specific_humidity","Airtight","Wind_speed"])
     array_HCM = list(["max","min","wind","rain","humidi","pressure"])
@@ -397,51 +409,199 @@ def Predict():
         if useExistingModel == 'on': # For existing model
             default_hidden_layers = 1
             default_split_ratio = 0.8             
-            if global_name == 'GOOGLE':
-                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))               
-            elif global_name == 'APPLE':
-                scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
-                train, test = split_data_default(scaled_data)
+            scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
+            train, test = split_data_default(scaled_data)
+            if global_name == 'APPLE':
                 if column_prediction == 'Open': 
-                    # Default parameters
                     default_hidden_neurons = 16
                     default_seq_size = 18
                     default_epochs = 400
-                    default_batch_size = 32                
-                    # Get parameters
-                    split_ratio,hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers = get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers)             
-                    # Check if the user wants to use an existing model
-                    model_path = model_path_apple + 'FFNN/FFNN_Model_Apple_Open.h5'
-                    
-                    start_train = time.time()
-                    model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path)
-                    end_train = time.time()
-                    
-                    x,y = to_sequences(test,1,18)
-                    start_predict = time.time()
-                    test_pred = model.predict(x)
-                    end_predict = time.time()
-                    testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
-                    
-                    y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
-                    testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
-                    
-                    time_train = round(end_train - start_train, 5)
-                    time_predict = round(end_predict - start_predict, 5)
-                    eda_model(y,test_pred,column_prediction,algorithm)
-                    return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
-                                    testScore_mse=testScore_mse, testScore_rmse = testScore_rmse,testScore_mae = testScore_mae,
-                                    testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
-                                    hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, 
-                                    hidden_layers=default_hidden_layers, epochs=default_epochs, 
-                                    batch_sizes=default_batch_size, split_ratio=default_split_ratio,
-                                    time_train = time_train,time_predict = time_predict)                                      
+                    default_batch_size = 32  
+                    model_path_ffnn = model_path_apple + 'FFNN/FFNN_Model_Apple_Open.h5'                      
+                elif column_prediction == 'High':
+                    default_seq_size = 16
+                    default_hidden_neurons = 22
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_apple + 'FFNN/FFNN_Model_Apple_High.h5'
+                elif column_prediction == 'Low':
+                    default_seq_size = 19
+                    default_hidden_neurons = 13
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_apple + 'FFNN/FFNN_Model_Apple_Low.h5'
+                elif column_prediction == 'Close':
+                    default_seq_size = 12
+                    default_hidden_neurons = 5
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_apple + 'FFNN/FFNN_Model_APPLE_Close.h5'
+                else:
+                    default_seq_size = 11
+                    default_hidden_neurons = 20
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_apple + 'FFNN/FFNN_Model_APPLE_AdjClose.h5'
+            elif global_name == 'GOOGLE':
+                if column_prediction == 'Open': 
+                    default_seq_size = 7
+                    default_hidden_neurons = 9
+                    default_epochs = 400
+                    default_batch_size = 32  
+                    model_path_ffnn = model_path_google + 'FFNN/FFNN_Model_GOOGLE_Open.h5' 
+                elif column_prediction == 'High':
+                    default_seq_size = 6
+                    default_hidden_neurons = 15
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_google + 'FFNN/FFNN_Model_GOOGLE_High.h5'
+                elif column_prediction == 'Low':
+                    default_seq_size = 6
+                    default_hidden_neurons = 11
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_google + 'FFNN/FFNN_Model_GOOGLE_Low.h5'
+                elif column_prediction == 'Close':
+                    default_seq_size = 11
+                    default_hidden_neurons = 6
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_google + 'FFNN/FFNN_Model_GOOGLE_Close.h5'
+                else:
+                    default_seq_size = 11
+                    default_hidden_neurons = 6
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_google + 'FFNN/FFNN_Model_GOOGLE_AdjClose.h5'
             elif global_name == 'AMAZON':
-                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))
+                if column_prediction == 'Open': 
+                    default_seq_size = 10
+                    default_hidden_neurons = 21
+                    default_epochs = 400
+                    default_batch_size = 32  
+                    model_path_ffnn = model_path_amazon + 'FFNN/FFNN_Model_AMAZON_Open.h5'
+                elif column_prediction == 'High':    
+                    default_seq_size = 7
+                    default_hidden_neurons = 21
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_amazon + 'FFNN/FFNN_Model_AMAZON_High.h5'
+                elif column_prediction == 'Low':
+                    default_seq_size = 11
+                    default_hidden_neurons = 9
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_amazon + 'FFNN/FFNN_Model_AMAZON_Low.h5'
+                else:
+                    default_seq_size = 12
+                    default_hidden_neurons = 5
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_amazon + 'FFNN/FFNN_Model_AMAZON_Close.h5'
             elif global_name == 'Weather_WS':
-                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))    
-            elif global_name == 'weather-HCM':
-                train, test = split_data_default(scale_data(global_data[column_prediction].values.reshape(-1,1)))     
+                if column_prediction == 'Pressure': 
+                    default_seq_size = 90
+                    default_hidden_neurons = 19
+                    default_epochs = 400
+                    default_batch_size = 32  
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Presure.h5'
+                elif column_prediction == 'Temperature':
+                    default_seq_size = 90
+                    default_hidden_neurons = 16
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Temperature.h5'
+                elif column_prediction == 'Saturation_vapor_pressure':
+                    default_seq_size = 7
+                    default_hidden_neurons = 30
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Saturation_vapor_pressure.h5'
+                elif column_prediction == 'Vapor_pressure_deficit':
+                    default_seq_size = 16
+                    default_hidden_neurons = 15
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Vapor_pressure_deficit.h5'
+                elif column_prediction == 'Specific_humidity':
+                    default_seq_size = 8
+                    default_hidden_neurons = 11
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Specific_humidity.h5'
+                elif column_prediction == 'Airtight':
+                    default_seq_size = 75
+                    default_hidden_neurons = 13
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Airtight.h5'
+                else:
+                    default_seq_size = 4
+                    default_hidden_neurons = 8
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_WS + 'FFNN/FFNN_Model_Temperature_Wind_speed.h5'
+            else:
+                if column_prediction =='max':
+                    default_seq_size = 15
+                    default_hidden_neurons = 40
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_HCM + 'FFNN/Train-FFNN-temperature-HCM-tmax.h5'
+                elif column_prediction =='min':
+                    default_seq_size = 50
+                    default_hidden_neurons = 65
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_HCM + 'FFNN/Train-FFNN-temperature-HCM-tmin.h5'
+                elif column_prediction =='wind':
+                    default_seq_size = 5
+                    default_hidden_neurons = 4
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_HCM + 'FFNN/Train-FFNN-temperature-HCM-wind.h5'
+                elif column_prediction =='rain':
+                    default_seq_size = 10
+                    default_hidden_neurons = 8
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_HCM + 'FFNN/Train-FFNN-temperature-HCM-rain.h5'
+                elif column_prediction =='humidi':
+                    default_seq_size = 20
+                    default_hidden_neurons = 19
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_HCM + 'FFNN/Train-FFNN-temperature-HCM-humidi.h5'
+                else:
+                    default_seq_size = 15
+                    default_hidden_neurons = 16
+                    default_epochs = 400
+                    default_batch_size = 32
+                    model_path_ffnn = model_path_HCM + 'FFNN/Train-FFNN-temperature-HCM-pressure.h5'
+            
+            start_train = time.time()
+            model = model_ffnn_exist(default_seq_size, default_hidden_neurons, model_path_ffnn)
+            end_train = time.time()
+            
+            x,y = to_sequences(test,1,default_seq_size)
+            start_predict = time.time()
+            test_pred = model.predict(x)
+            end_predict = time.time()
+            testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
+            
+            y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
+            testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
+            
+            time_train = round(end_train - start_train, 5)
+            time_predict = round(end_predict - start_predict, 5)
+            eda_model(y,test_pred,column_prediction,algorithm)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                            testScore_mse=testScore_mse, testScore_rmse = testScore_rmse,testScore_mae = testScore_mae,
+                            testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                            hidden_neurons=default_hidden_neurons, seq_size=default_seq_size, 
+                            hidden_layers=default_hidden_layers, epochs=default_epochs, 
+                            batch_sizes=default_batch_size, split_ratio=default_split_ratio,
+                            time_train = time_train,time_predict = time_predict)                                      
         else: # For new dataset or train no existing model
             split_ratio_new,hidden_neurons_new,seq_size_new,epochs_new,batch_sizes_new,hidden_layers_new = get_param_ffnn_datasetNew()            
             scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
@@ -478,111 +638,60 @@ def Predict():
             hidden_layers_lstm = 1
             split_ratio_lstm = 0.8
             
-            if global_name == 'APPLE':
+            if global_name == 'APPLE' or global_name == 'GOOGLE' or global_name == 'AMAZON':
                 seq_size_lstm = 12
                 hidden_neurons_lstm = 5
-                output_lstm = 5      
-                model_path_lstm = model_path_apple + 'LSTM/LSTM_APPLE.h5'
-                scaled_data, scaler = scale_data(global_data[array_stock])
-                train, test = split_data_default(scaled_data)    
-                
-                start_train = time.time()         
-                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
-                end_train = time.time()
-                
-                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
-                
-                start_predict = time.time()
-                result_LSTM = model_lstm.predict(testX_LSTM) 
-                end_predict = time.time()
-                
-                predict_LSTM_real = scaler.inverse_transform(result_LSTM)
-                textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
-                time_train = round(end_train - start_train, 5)
-                time_predict = round(end_predict - start_predict, 5) 
-                                                             
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction,algorithm)
-                
-                return jsonify(algorithm=algorithm, column_prediction=column_prediction,
-                                testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
-                                testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
-                                hidden_neurons = hidden_neurons_lstm, 
-                                seq_size=seq_size_lstm, 
-                                hidden_layers= hidden_layers_lstm,
-                                epochs=epochs_lstm, 
-                                batch_sizes=batch_sizes_lstm, 
-                                split_ratio=split_ratio_lstm,
-                                time_train = time_train,time_predict = time_predict)
-            elif global_name == 'GOOGLE':
-                seq_size_lstm = 12
+                output_lstm = 5
+                array_temp = array_stock   
+                if global_name == 'APPLE':      
+                    model_path_lstm = model_path_apple + 'LSTM/LSTM_APPLE.h5'
+                elif global_name == 'GOOGLE':
+                    model_path_lstm = model_path_google + 'LSTM/LSTM_GOOGLE.h5'
+                else:
+                    model_path_lstm = model_path_amazon + 'LSTM/LSTM_AMAZON.h5'
+            elif global_name == 'Weather_WS':
+                seq_size_lstm = 16
+                hidden_neurons_lstm = 35
+                output_lstm = 7
+                array_temp = array_WS
+                model_path_lstm = model_path_WS + 'LSTM/LSTM_DucWS.h5'
+            else:
+                seq_size_lstm = 35
                 hidden_neurons_lstm = 5
-                output_lstm = 5      
-                model_path_lstm = model_path_google + 'LSTM/LSTM_GOOGLE.h5'
-                scaled_data, scaler = scale_data(global_data[array_stock])
-                train, test = split_data_default(scaled_data)    
+                output_lstm = 6
+                array_temp = array_HCM
+                model_path_lstm = model_path_HCM + 'LSTM/LSTM_HCM.h5'
                 
-                start_train = time.time()         
-                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
-                end_train = time.time()
-                
-                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
-                
-                start_predict = time.time()
-                result_LSTM = model_lstm.predict(testX_LSTM) 
-                end_predict = time.time()
-                
-                predict_LSTM_real = scaler.inverse_transform(result_LSTM)
-                textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
-                time_train = round(end_train - start_train, 5)
-                time_predict = round(end_predict - start_predict, 5) 
-                                                             
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction,algorithm)
-                
-                return jsonify(algorithm=algorithm, column_prediction=column_prediction,
-                                testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
-                                testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
-                                hidden_neurons = hidden_neurons_lstm, 
-                                seq_size=seq_size_lstm, 
-                                hidden_layers= hidden_layers_lstm,
-                                epochs=epochs_lstm, 
-                                batch_sizes=batch_sizes_lstm, 
-                                split_ratio=split_ratio_lstm,
-                                time_train = time_train,time_predict = time_predict)                
-            elif global_name == 'AMAZON':
-                seq_size_lstm = 12
-                hidden_neurons_lstm = 5
-                output_lstm = 5      
-                model_path_lstm = model_path_amazon + 'LSTM/LSTM_AMAZON.h5'
-                scaled_data, scaler = scale_data(global_data[array_stock])
-                train, test = split_data_default(scaled_data)    
-                
-                start_train = time.time()         
-                model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm,algorithm)
-                end_train = time.time()
-                
-                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
-                
-                start_predict = time.time()
-                result_LSTM = model_lstm.predict(testX_LSTM) 
-                end_predict = time.time()
-                
-                predict_LSTM_real = scaler.inverse_transform(result_LSTM)
-                textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
-                time_train = round(end_train - start_train, 5)
-                time_predict = round(end_predict - start_predict, 5) 
-                                                             
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_stock,column_prediction,algorithm)
-                
-                return jsonify(algorithm=algorithm, column_prediction=column_prediction,
-                                testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
-                                testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
-                                hidden_neurons = hidden_neurons_lstm, 
-                                seq_size=seq_size_lstm, 
-                                hidden_layers= hidden_layers_lstm,
-                                epochs=epochs_lstm, 
-                                batch_sizes=batch_sizes_lstm, 
-                                split_ratio=split_ratio_lstm,
-                                time_train = time_train,time_predict = time_predict)            
+            scaled_data, scaler = scale_data(global_data[array_temp])
+            train, test = split_data_default(scaled_data)    
+            
+            start_train = time.time()         
+            model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
+            end_train = time.time()
+            
+            testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
+            
+            start_predict = time.time()
+            result_LSTM = model_lstm.predict(testX_LSTM) 
+            end_predict = time.time()
+            
+            predict_LSTM_real = scaler.inverse_transform(result_LSTM)
+            textY_LSTM_real = scaler.inverse_transform(testY_LSTM)
+            time_train = round(end_train - start_train, 5)
+            time_predict = round(end_predict - start_predict, 5) 
+                                                            
+            testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_temp,column_prediction,algorithm)
+            
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                            testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
+                            testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
+                            hidden_neurons = hidden_neurons_lstm, 
+                            seq_size=seq_size_lstm, 
+                            hidden_layers= hidden_layers_lstm,
+                            epochs=epochs_lstm, 
+                            batch_sizes=batch_sizes_lstm, 
+                            split_ratio=split_ratio_lstm,
+                            time_train = time_train,time_predict = time_predict)          
         else: # Train a new model or use a new dataset
             output_lstm_new = len(array_column_new)
             split_ratio_lstm_new, hidden_neurons_lstm_new,seq_size_lstm_new, epochs_lstm_new, batch_sizes_lstm_new, hidden_layers_lstm_new = get_param_ffnn_datasetNew()                                          
@@ -618,7 +727,6 @@ def Predict():
                            time_train = time_train,time_predict = time_predict)
     elif algorithm == 'algorithm-var':
         if useExistingModel == 'on':
-            array_temp = []
             p = None
             if global_name == 'AMAZON' or global_name == 'GOOGLE':
                 p =1

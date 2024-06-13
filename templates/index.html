@@ -1045,6 +1045,11 @@
                 document.getElementById('infor_predict').style.display = 'none';
                 $("#plot-predict").attr("src", "static/images/Loading-Spinner.gif");
                 document.getElementById('modelParameters').style.display = 'none';
+                // Hide the model parameters
+                document.getElementById('EpochBatchSize').style.display = 'none';
+                document.getElementById('SplitHiddenlayer').style.display = 'none';
+                document.getElementById('neuronWindowsize').style.display = 'none';
+                document.getElementById('lagOrderContainer').style.display = 'none';
                 // Show the prediction status and update its text
                 var predictionStatus = document.getElementById('predictionStatus');
                 predictionStatus.style.display = 'block';
