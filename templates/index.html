@@ -617,6 +617,31 @@
             <span class="adjust-parameter"
                 style="user-select: none; padding-left: 46px; display: none; text-decoration: underline; cursor: pointer; font-size: 14px;color: #3652AD; margin-top: 5px;"
                 onclick="toggleLabel()">Configure options</span>
+
+            <div id="thanhngang"
+                style=" display:none; color: black; text-align: center; width: 100%; font-size: 13px; user-select: none; margin-top: 10px; margin-bottom: 10px">
+                .............................................................................
+            </div>
+            <div id="checkboxparamchild" style="display: none;">
+                <input type="checkbox" id="usechild" name="usechild" style="margin-left: 48px;"
+                    onchange="toggleInput()">
+                <label style="font-size: 15px; margin-right: 5px;" for="usechild">Subsequence prediction: </label>
+                <input type="text" id="predictionInput" name="predictionInput" placeholder="Enter prediction number..."
+                    disabled>
+            </div>
+            <script>
+                function toggleInput() {
+                    var checkbox = document.getElementById('usechild');
+                    var input = document.getElementById('predictionInput');
+                    if (checkbox.checked) {
+                        input.disabled = false;
+                    } else {
+                        input.disabled = true;
+                        input.value = '';
+                    }
+                }
+            </script>
+
             <!-- Custome Adjust Param  -->
             <script>
                 document.getElementById('algorithm').addEventListener('change', function () {
@@ -625,6 +650,8 @@
                     var getalgorithm = document.getElementById('algorithm');
                     var outputcolumn = document.getElementById('getcolumnoutput');
                     var or_predict = document.getElementById('or_predict');
+                    var checkboxUseParamChild = document.getElementById('checkboxparamchild');
+                    var thanhngang = document.getElementById('thanhngang');
                     var dataset = globalName;
                     if (dataset == "AMAZON" || dataset == "APPLE" || dataset == "GOOGLE" || dataset == "Weather_WS" || dataset == "weather-HCM") {
                         if (this.value !== '') {
@@ -633,18 +660,24 @@
                                 configOptionsSpan.style.display = 'block';
                                 checkboxUseParam.style.display = 'block';
                                 or_predict.style.display = 'block';
+                                checkboxUseParamChild.style.display = 'block';
+                                thanhngang.style.display = 'block';
                             }
                             else {
                                 outputcolumn.style.display = 'none';
                                 configOptionsSpan.style.display = 'block';
                                 checkboxUseParam.style.display = 'block';
                                 or_predict.style.display = 'block';
+                                checkboxUseParamChild.style.display = 'block';
+                                thanhngang.style.display = 'block';
                             }
                         } else {
                             outputcolumn.style.display = 'none';
                             configOptionsSpan.style.display = 'none';
                             checkboxUseParam.style.display = 'none';
                             or_predict.style.display = 'none';
+                            checkboxUseParamChild.style.display = 'none';
+                            thanhngang.style.display = 'none'
                         }
                     }
                     else {
@@ -653,16 +686,21 @@
                             outputcolumn.style.display = 'block';
                             or_predict.style.display = 'none';
                             checkboxUseParam.style.display = 'none';
+                            checkboxUseParamChild.style.display = 'block';
+                            thanhngang.style.display = 'block';
                         }
                         else {
                             configOptionsSpan.style.display = 'block';
                             outputcolumn.style.display = 'none';
                             or_predict.style.display = 'none';
                             checkboxUseParam.style.display = 'none';
+                            checkboxUseParamChild.style.display = 'block';
+                            thanhngang.style.display = 'block';
                         }
                     }
                 });
             </script>
+
             <!-- Add Modal adjust param -->
             <div id="myModal" class="modal">
                 <div class="modal-content">
@@ -1004,7 +1042,7 @@
                         </div>
                         <div id="windowsizecontainer" style="display: flex;">
                             <div id="dodo1">
-                                <p id="windowsize">Order: </p>
+                                <p id="windowsize">Window size: </p>
                             </div>
                             <p id="windowsizeDisplay" style="margin-left: 5px;"></p>
                         </div>
@@ -1064,8 +1102,11 @@
                 var algorithm = document.getElementById('algorithm').value; // Get the selected algorithm
                 var column_prediction = document.getElementById('column_prediction').value; // Get the selected column
                 var useExistingModel = document.getElementById('useExistingModel').checked ? 'on' : 'off';
+                var usechild = document.getElementById('usechild').checked ? 'on' : 'off';
+
                 document.getElementById('infor_predict').style.display = 'none';
                 $("#plot-predict").attr("src", "static/images/Loading-Spinner.gif");
+                var predictionInputValue = $('#predictionInput').val();
                 document.getElementById('modelParameters').style.display = 'none';
                 // Hide the model parameters
                 document.getElementById('EpochBatchSize').style.display = 'none';
@@ -1079,6 +1120,7 @@
                 document.getElementById('hiddenlayer').textContent = 'Layers:';
                 var predictionStatus = document.getElementById('predictionStatus');
                 predictionStatus.style.display = 'block';
+                predictionStatus.style.color = 'black';
                 predictionStatus.textContent = ' Currently in the process of predicting...';
                 $.ajax({
                     url: '/model',
@@ -1086,10 +1128,15 @@
                     data: {
                         'algorithm': algorithm,
                         'column_prediction': column_prediction,
-                        'useExistingModel': useExistingModel
+                        'useExistingModel': useExistingModel,
+                        'usechild': usechild,
+                        'predictionInputValue': predictionInputValue
                     },
                     success: function (data) {
+                        console.log('Trang Thai:', usechild);
+                        console.log('giá trị:', predictionInputValue);
                         predictionStatus.textContent = 'Successfully predicted...';
+                        predictionStatus.style.color = 'green';
                         document.getElementById('infor_predict').style.display = 'block';
                         predictionData = data;
                         updatePredictionDisplay();
@@ -1105,12 +1152,23 @@
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
 
                     },
-                    error: function (error) {
-                        console.error('Error:', error);
-                        var errorMessage = error.responseJSON && error.responseJSON.error
-                            ? error.responseJSON.error
-                            : 'Failed to predict...';
+                    error: function (xhr, textStatus, errorThrown) {
+                        console.error('Error:', errorThrown);
+                        var errorMessage = 'Failed to predict...';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            try {
+                                var responseJson = JSON.parse(xhr.responseText);
+                                if (responseJson.message) {
+                                    errorMessage = responseJson.message;
+                                }
+                            } catch (e) {
+                                console.error('Error parsing responseText as JSON');
+                            }
+                        }
                         predictionStatus.textContent = errorMessage;
+                        predictionStatus.style.color = 'red';
                     }
                 });
             });
