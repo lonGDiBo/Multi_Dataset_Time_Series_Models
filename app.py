@@ -51,6 +51,14 @@ def scale_data_original_var(column_prediction,arrayData,scaler,result_var,test):
     test_var_real = scaler.inverse_transform(test)[:,arrayData.index(column_prediction)]
     return testPredict_var_real, test_var_real
 
+def scale_data_original_arima(test, predictions, scaler):
+    predictions_np = np.array(predictions)
+    test_np = np.array(test)
+    predictions_actual = scaler.inverse_transform(predictions_np.reshape(1, -1))
+    test_actual = scaler.inverse_transform(test_np.reshape(1, -1))
+    return predictions_actual, test_actual
+
+
 #---------------------------------- END SCALE DATA ---------------------------------
 #---------------------------------- START SPLIT DATA --------------------------------
 def split_data_default(data, split_ratio=0.8):
@@ -143,6 +151,7 @@ def VARNN_new(outputs,p,hidden_neural,trainX,trainY,epochs,batch_size):
     custom_model.compile(optimizer='adam', loss='mse')
     custom_model.fit(trainX, trainY, verbose=0,epochs=epochs, batch_size=batch_size, validation_split=0.2)
     return custom_model
+
 def get_param_VARNN_datasetNew():
    split_ratio_get = global_parameters.get('splitdata')
    if split_ratio_get == 'split73':
@@ -224,7 +233,7 @@ def LSTM_new( train,test,outputs,seq,hidden_neural,epochs,batch_size,hidden_laye
     model_LSTM.fit(trainX_LSTM, trainY_LSTM, validation_data=(testX_LSTM, testY_LSTM), verbose=0, epochs=epochs, batch_size=batch_size)
     return model_LSTM
 
-def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayValue,column_prediction,alogrithm):
+def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayValue,column_prediction,algorithm):
     predict_LSTM = result_LSTM[:,arrayValue.index(column_prediction)]
     textY_LSTM = testY_LSTM[:,arrayValue.index(column_prediction)]  
     testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM, predict_LSTM)                     
@@ -232,7 +241,7 @@ def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayV
     predict_LSTM_real = predict_LSTM_real[:,arrayValue.index(column_prediction)]
     textY_LSTM_real = textY_LSTM_real[:,arrayValue.index(column_prediction)]                   
     testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_real, predict_LSTM_real)                      
-    eda_model(textY_LSTM,predict_LSTM,column_prediction,alogrithm)
+    eda_model(textY_LSTM,predict_LSTM,column_prediction,algorithm)
     return testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real
 
 #---------------------------------- END LSTM ----------------------------------
@@ -290,6 +299,83 @@ def get_Var_param():
 
 #---------------------------------- END VAR ----------------------------------
 #---------------------------------- ARIMA ----------------------------------
+
+def ARIMA_exist_stock(train):
+    model_arima = pm.auto_arima(train, start_p=0, start_q=0,
+                      test='adf',
+                      max_p=3, max_q=3, 
+                      m=1,              
+                      d=None,           
+                      seasonal=False,   
+                      start_P=0,
+                      D=0,
+                      trace=True,
+                      error_action='ignore',
+                      suppress_warnings=True,
+                      stepwise=True)
+    return model_arima
+
+def ARIMA_exist_weather(train):
+    model_arima = pm.auto_arima(train, start_p=0, start_q=0,
+                    test='adf',       
+                    max_p = 3, max_q= 3, 
+                    m=12,             
+                    d=None,          
+                    seasonal=True,  
+                    start_P=0,
+                    D = 1, 
+                    trace=True,
+                    error_action='ignore',
+                    suppress_warnings=True,
+                    stepwise=True)
+    return model_arima
+
+def ARIMA_New(train,max_ar_order,max_ma_order,seasonal_period):
+    seasonal = True if seasonal_period != 1 else False
+    
+    model_arima = pm.auto_arima(train, start_p=0, start_q=0,
+                    test='adf',       
+                    max_p=max_ar_order, max_q=max_ma_order, 
+                    m=seasonal_period, 
+                    d=None,          
+                    seasonal=seasonal, 
+                    start_P=0,
+                    D=1, 
+                    trace=True,  
+                    error_action='ignore',
+                    suppress_warnings=True,
+                    stepwise=True)
+    return model_arima
+        
+def ARIMA_Predict(train,test,p,d,q,seasonal_order):    
+    warnings.simplefilter('ignore', ConvergenceWarning)
+    history = [x for x in  train[-200:]]
+    predictions = []
+    start_predict = time.time()
+    for t in range(len(test)):
+        arima_train = sm.tsa.arima.ARIMA(history, order=(p,d,q),seasonal_order=seasonal_order).fit()
+        output = arima_train.forecast()
+        yhat = output[0]
+        predictions.append(yhat)
+        obs = test[t]
+        history.append(obs)
+        history = history[1:]
+    end_predict = time.time()
+    time_predict = round(end_predict - start_predict, 5)
+    warnings.simplefilter('default', ConvergenceWarning)
+    return predictions,time_predict
+
+def get_ARIMA_param():
+    split_ratio_get = global_parameters.get('splitdata')
+    if split_ratio_get == 'split73':
+       split_ratio = 0.7
+    else:
+       split_ratio = 0.8
+    max_ar_order = int(global_parameters.get('Max_lag_order'))
+    max_ma_order = int(global_parameters.get('Max_moving_average_order'))
+    seasonal_period = int(global_parameters.get('Seasonal_period'))
+    return split_ratio,max_ar_order,max_ma_order,seasonal_period
+
 #---------------------------------- END ARIMA ----------------------------------
 def calculate_metrics(test, predictions):
     mse = mean_squared_error(test, predictions)
@@ -299,18 +385,18 @@ def calculate_metrics(test, predictions):
 
 
 #---------------------------------- START EDA ----------------------------------
-def eda_model(y,test_pred,column_prediction,alogrithm):
+def eda_model(y,test_pred,column_prediction,algorithm):
     global global_name
     plt.clf() 
     plt.plot(y,label="Actual value")
     plt.plot(test_pred,label="Predicted value")
-    if alogrithm == 'algorithm-ffnn':
+    if algorithm == 'algorithm-ffnn':
         plt.title('FFNN Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
-    elif alogrithm == 'algorithm-lstm':
+    elif algorithm == 'algorithm-lstm':
         plt.title('LSTM Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
-    elif alogrithm == 'algorithm-var':
+    elif algorithm == 'algorithm-var':
         plt.title('VAR Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
-    elif alogrithm == 'algorithm-varnn':
+    elif algorithm == 'algorithm-varnn':
         plt.title('VARNN Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
     else:
         plt.title('ARIMA Predictions vs Actual {} Values for {}'.format(column_prediction,global_name))
@@ -958,10 +1044,64 @@ def Predict():
                             testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
                             p_lag=order_lag_var_new,split_ratio=split_ratio_varnn_new,hidden_neurons=hidden_neurons_varnn_new,epochs=epochs_varnn_new,batch_sizes=batch_sizes_varnn_new,
                             time_train = time_train,time_predict = time_predict)
+    elif algorithm == 'algorithm-arima':
+        if useExistingModel == 'on':
+            scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
+            train, test = split_data_default(scaled_data)
+            if global_name == 'AMAZON' or global_name == 'GOOGLE' or global_name == 'APPLE':
+                start_train = time.time()
+                model_arima = ARIMA_exist_stock(train)
+                end_train = time.time()
+            else:
+                start_train = time.time()
+                model_arima = ARIMA_exist_weather(train)
+                end_train = time.time()
+            p, d, q = model_arima.order
+            seasonal_order = model_arima.seasonal_order
+            
+            predictions_arima,time_predict = ARIMA_Predict(train,test,p,d,q,seasonal_order)    
+            mse , rmse , mae = calculate_metrics(test ,predictions_arima)  
+              
+            predictions_arima_real, test_arima_real = scale_data_original_arima(test,predictions_arima,scaler)
+            mse_real, rmse_real, mae_real = calculate_metrics(test_arima_real,predictions_arima_real)
+            time_train = round(end_train - start_train, 5)
+            eda_model(test,predictions_arima,column_prediction,algorithm)   
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction,
+                        testScore_mse=mse,testScore_rmse=rmse,testScore_mae=mae,
+                        testScore_mse_real=mse_real, testScore_rmse_real = rmse_real,testScore_mae_real = mae_real,
+                        p=p,d=d,q=q, split_ratio=0.8,
+                        time_train = time_train,time_predict = time_predict)
+        
+        else: # Train a new model or use a new dataset
+            split_ratio_arima_new,max_lag_order_new, max_moving_avg_new,seasonal_order_new = get_ARIMA_param()
+            scaled_data, scaler = scale_data(global_data[column_prediction].values.reshape(-1,1))
+            train_new, test_new = split_data_new(scaled_data,split_ratio_arima_new)
+            
+            start_train = time.time()
+            model_arima_new = ARIMA_New(train_new,max_lag_order_new,max_moving_avg_new,seasonal_order_new)
+            end_train = time.time()
+            
+            p_new,d_new,q_new  = model_arima_new.order
+            seasonal_order= model_arima_new.seasonal_order
+            
+            predictions_arima_new,time_predict_new = ARIMA_Predict(train_new,test_new,p_new,d_new,q_new,seasonal_order)    
+            mse , rmse , mae = calculate_metrics(test_new,predictions_arima_new)  
+            
+            predictions_arima_real_new,test_arima_real_new = scale_data_original_arima(test_new,predictions_arima_new,scaler)           
+            mse_real, rmse_real, mae_real = calculate_metrics(test_arima_real_new,predictions_arima_real_new)
+            time_train = round(end_train - start_train, 5)
+            time_predict = time_predict_new
+            eda_model(test_new,predictions_arima_new,column_prediction,algorithm)
+            return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
+                            testScore_mse=mse,testScore_rmse=rmse,testScore_mae=mae,
+                            testScore_mse_real=mse_real, testScore_rmse_real = rmse_real,testScore_mae_real = mae_real,
+                            p=p_new,d=d_new,q=q_new, split_ratio=split_ratio_arima_new,
+                            time_train = time_train,time_predict = time_predict)
     else:
         return render_template('index.html', message="Please choose a model"), 400
 
-    
+
+   
 global_parameters = {}
 
 @app.route('/save_parameters', methods=['GET', 'POST'])

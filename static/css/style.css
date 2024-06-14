@@ -914,7 +914,9 @@ tr:hover {
 #neuronWindowsize,
 #lagOrderContainer,
 #neuronlagorder,
-#lagorderVarnnContainer {
+#lagorderVarnnContainer,
+#movingavgContainer,
+#differencingContainer {
     display: flex;
     margin-left: 43px;
     margin-right: 47px;
@@ -930,7 +932,9 @@ tr:hover {
 #neuroncontainer,
 #splitvarcontainer,
 #ordercontainer,
-#lagorderVarnnContainer {
+#lagorderVarnnContainer,
+#movingavgContainer,
+#differencingContainer {
     align-items: center;
     flex: 1;
     /* justify-content: space-between; */

@@ -36,9 +36,12 @@
                 });
             </script>
 
-            <div><a href="http://example.com" target="_blank" class="my-link-page">Resoures</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link-page">Documents</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link-page">Report</a></div>
+            <div><a href="https://drive.google.com/drive/u/3/folders/1KZcPkVMkNfTCHzH69I4lEbFZEo1McspE" target="_blank"
+                    class="my-link-page">Resources</a></div>
+            <div><a href="https://drive.google.com/drive/u/3/folders/1ZbyXW22Jv6kFtRPgWAsIHno8k1Xnw0aA" target="_blank"
+                    class="my-link-page">Documents</a></div>
+            <div><a href="https://drive.google.com/drive/u/3/folders/1uj0scfcWWQW_WuOdOhLWlA84YUApgKOR" target="_blank"
+                    class="my-link-page">Report</a></div>
             <label class="switch">
                 <span class="sun"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                         <g fill="#ffd43b">
@@ -114,11 +117,14 @@
             <button type="button" id="signup-button">Sign Up</button>
             <button type="button" id="signin-button">Sign In</button>
 
-            <div><a href="http://example.com" target="_blank" class="my-link1">Lates News</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link1">Stock Ideas</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link1">Today's weather</a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link1">Stock Forecasts </a></div>
-            <div><a href="http://example.com" target="_blank" class="my-link1">Earnings & Revenue</a></div>
+            <div><a href="https://edition.cnn.com/" target="_blank" class="my-link1">Lates News</a></div>
+            <div><a href="https://stockfetcher.com/" target="_blank" class="my-link1">Stock Ideas</a></div>
+            <div><a href="https://www.accuweather.com/en/vn/ho-chi-minh-city/353981/hourly-weather-forecast/353981?hour=1718100000"
+                    target="_blank" class="my-link1">Today's weather</a></div>
+            <div><a href="https://www.wallstreetzen.com/stock-screener/stock-forecast" target="_blank"
+                    class="my-link1">Stock Forecasts </a></div>
+            <div><a href="https://corporatefinanceinstitute.com/resources/accounting/income-vs-revenue-vs-earnings/"
+                    target="_blank" class="my-link1">Earnings & Revenue</a></div>
             <div class="social-icons">
                 <a href="https://www.facebook.com/minhlong020102" target="_blank"><i class="fab fa-facebook-f"></i></a>
                 <a href="https://www.instagram.com/khoi.iag/" target="_blank"><i class="fab fa-instagram"></i></a>
@@ -960,7 +966,6 @@
                 </div>
                 <button id="viewParameters" type="button">View model parameters</button>
                 <div id="modelParameters" style="display: none;">
-
                     <div id="SplitHiddenlayer" style="display: none ">
                         <div id="splitcontainer" style="display: flex;">
                             <div id="dodo1">
@@ -970,7 +975,7 @@
                         </div>
                         <div id="hiddenlayercontainer" style="display: flex;">
                             <div id="dodo1">
-                                <p id="hiddenlayer">Layers:</p>
+                                <p id="hiddenlayer" style="margin-right: 5px;">Layers:</p>
                             </div>
                             <p id="hiddenlayerDisplay"></p>
                         </div>
@@ -1006,11 +1011,24 @@
                     </div>
                     <div id="lagorderVarnnContainer" style="display: none ">
                         <div id="dodolag">
-                            <p id="orderlag">Order of lags:</p>
+                            <p id="orderlag">Lags of order:</p>
                         </div>
                         <p id="lagordervarnnDisplay" style="margin-left: 5px;"></p>
                     </div>
-
+                    <!-- ARIMA -->
+                    <div id="differencingContainer" style="display: none ">
+                        <div id="dodolag1">
+                            <p id="orderlag">Differencing order:</p>
+                        </div>
+                        <p id="differencingDisplay" style="margin-left: 5px;"></p>
+                    </div>
+                    <div id="movingavgContainer" style="display: none ">
+                        <div id="dodolag1">
+                            <p id="orderlag">Moving average order:</p>
+                        </div>
+                        <p id="movingavgDisplay" style="margin-left: 5px;"></p>
+                    </div>
+                    <!--VAR-->
                     <div id="lagOrderContainer" style="display: none;">
                         <div id="splitvarcontainer" style="display: flex;">
                             <div id="dodolag">
@@ -1055,6 +1073,8 @@
                 document.getElementById('neuronWindowsize').style.display = 'none';
                 document.getElementById('lagOrderContainer').style.display = 'none';
                 document.getElementById('lagorderVarnnContainer').style.display = 'none';
+                document.getElementById('movingavgContainer').style.display = 'none';
+                document.getElementById('differencingContainer').style.display = 'none';
                 // Show the prediction status and update its text
                 document.getElementById('hiddenlayer').textContent = 'Layers:';
                 var predictionStatus = document.getElementById('predictionStatus');
@@ -1079,6 +1099,8 @@
                             displayparam_var();
                         if (data.algorithm == 'algorithm-varnn')
                             displayparam_varnn();
+                        if (data.algorithm == 'algorithm-arima')
+                            displayparam_arima();
 
                         $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
 
@@ -1158,6 +1180,28 @@
             document.getElementById('lagOrderContainer').style.display = 'flex';
             orderlag.textContent = predictionData.p;
             splitvar.textContent = predictionData.split_ratio;
+
+            var time_train = document.getElementById('timetrainDisplay');
+            var time_test = document.getElementById('timetestDisplay');
+            time_train.textContent = predictionData.time_train + ' (s)';
+            time_test.textContent = predictionData.time_predict + ' (s)';
+        }
+        function displayparam_arima() {
+            var hiddenlayer = document.getElementById('hiddenlayerDisplay');
+            var split = document.getElementById('splitDisplay');
+            var movingavg = document.getElementById('movingavgDisplay');
+            var differencing = document.getElementById('differencingDisplay');
+            var lagchange = document.getElementById('hiddenlayer');
+
+            document.getElementById('SplitHiddenlayer').style.display = 'flex';
+            hiddenlayer.textContent = predictionData.p;
+            lagchange.textContent = 'Lags of order: ';
+            split.textContent = predictionData.split_ratio;
+
+            document.getElementById('movingavgContainer').style.display = 'flex';
+            movingavg.textContent = predictionData.q;
+            document.getElementById('differencingContainer').style.display = 'flex';
+            differencing.textContent = predictionData.d;
 
             var time_train = document.getElementById('timetrainDisplay');
             var time_test = document.getElementById('timetestDisplay');
