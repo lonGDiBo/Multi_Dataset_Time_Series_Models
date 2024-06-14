@@ -5,7 +5,7 @@
             "src": "app.py",
             "use": "@vercel/python",
             "config": {
-                "installCommand": "bash install.sh"
+                "runtime": "python3.8"
             }
         }
     ],
