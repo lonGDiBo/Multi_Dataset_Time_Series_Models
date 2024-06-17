@@ -51,11 +51,16 @@ def scale_data_original_var(column_prediction,arrayData,scaler,result_var,test):
     test_var_real = scaler.inverse_transform(test)[:,arrayData.index(column_prediction)]
     return testPredict_var_real, test_var_real
 
-def scale_data_original_arima(test, predictions, scaler):
+def scale_data_original_arima(test, predictions, scaler,usechild,predictionInputValue):
     predictions_np = np.array(predictions)
     test_np = np.array(test)
     predictions_actual = scaler.inverse_transform(predictions_np.reshape(1, -1))
     test_actual = scaler.inverse_transform(test_np.reshape(1, -1))
+    if usechild == 'on':
+        predictionInputValue = min(predictionInputValue, len(predictions_actual[0]), len(test_actual[0]))
+        predictions_actual = predictions_actual[0][:predictionInputValue]
+        test_actual = test_actual[0][:predictionInputValue]
+
     return predictions_actual, test_actual
 
 
@@ -233,7 +238,7 @@ def LSTM_new( train,test,outputs,seq,hidden_neural,epochs,batch_size,hidden_laye
     model_LSTM.fit(trainX_LSTM, trainY_LSTM, validation_data=(testX_LSTM, testY_LSTM), verbose=0, epochs=epochs, batch_size=batch_size)
     return model_LSTM
 
-def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayValue,column_prediction,algorithm):
+def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayValue,column_prediction,algorithm,usechild):
     predict_LSTM = result_LSTM[:,arrayValue.index(column_prediction)]
     textY_LSTM = testY_LSTM[:,arrayValue.index(column_prediction)]  
     testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(textY_LSTM, predict_LSTM)                     
@@ -241,7 +246,10 @@ def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayV
     predict_LSTM_real = predict_LSTM_real[:,arrayValue.index(column_prediction)]
     textY_LSTM_real = textY_LSTM_real[:,arrayValue.index(column_prediction)]                   
     testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_real, predict_LSTM_real)                      
-    eda_model(textY_LSTM,predict_LSTM,column_prediction,algorithm)
+    if usechild == 'on':
+        eda_model_child(textY_LSTM,predict_LSTM,column_prediction,algorithm)
+    else:
+        eda_model(textY_LSTM,predict_LSTM,column_prediction,algorithm)
     return testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real
 
 #---------------------------------- END LSTM ----------------------------------
@@ -403,26 +411,29 @@ def eda_model(y,test_pred,column_prediction,algorithm):
     plt.legend()
     plt.savefig('static/images/plot_predict.png')
 
-def eda_model_child(y,test_pred,column_prediction,algorithm):
+def eda_model_child(y, test_pred, column_prediction, algorithm):
     global global_name
-    plt.clf() 
-    plt.scatter(range(len(y)), y, label="Actual value", color='blue')
-    plt.scatter(range(len(test_pred)), test_pred, label="Predicted value", color='red')
-    plt.plot(range(len(test_pred)), test_pred, label="Prediction Trend", color='red', linestyle='--')
+    plt.clf()
+    x_range = np.arange(1, len(y) + 1)
+    plt.scatter(x_range, y, label="Actual value", color='blue')
+    plt.scatter(x_range, test_pred, label="Predicted value", color='red')
+    plt.plot(x_range, test_pred, label="Prediction Trend", color='red', linestyle='--')
+    
+    plt.xticks(x_range)
+    
     if algorithm == 'algorithm-ffnn':
-        plt.title('FFNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
-    elif algorithm == 'algorithm-lstm':
-        plt.title('LSTM Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
+        plt.title('FFNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
     elif algorithm == 'algorithm-var':
-        plt.title('VAR Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
+        plt.title('VAR Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
     elif algorithm == 'algorithm-varnn':
-        plt.title('VARNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
+        plt.title('VARNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
     else:
-        plt.title('ARIMA Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
+        plt.title('ARIMA Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
     plt.legend()
     plt.savefig('static/images/plot_predict.png')
-    
 #---------------------------------- END EDA ----------------------------------
+
+# 
 @app.route('/')
 def index():
     return render_template('login.html')
@@ -510,7 +521,6 @@ def eda_data():
     return jsonify(column_name=column_name)
 
 
-
 @app.route('/model', methods=['GET', 'POST'])
 def Predict():
     global global_data 
@@ -545,7 +555,7 @@ def Predict():
     useExistingModel = request.form.get('useExistingModel') 
     usechild = request.form.get('usechild')
     predictionInputValue = request.form.get('predictionInputValue')
-    
+
     scaled_data = None  
     scaler = None 
     start_train = 0
@@ -566,9 +576,13 @@ def Predict():
     y = None
     y_real = None
     test_pred_real = None
+    selected_element = None
     # Param LSTM
     model_path_lstm = None
     model_lstm = None
+    # Param VAR
+    test_temp = []
+    test_new_temp = []
     # Param VARNN
     model_path_varnn = None
     model_varnn = None
@@ -766,7 +780,6 @@ def Predict():
                     if predictionInputValue <= len(test) and predictionInputValue > 0:
                         selected_element = np.concatenate((train[-default_seq_size:], test[0:predictionInputValue]), axis=0)  
                         x,y = to_sequences(selected_element,1,default_seq_size)
-                        print(len(test),' ',predictionInputValue)
                     else:  
                         return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
                 else: 
@@ -802,8 +815,15 @@ def Predict():
                 start_train = time.time()
                 model = model_ffnn_new(train_datanew, test_datanew,hidden_layers_new, seq_size_new, hidden_neurons_new, epochs_new, batch_sizes_new)
                 end_train = time.time()
-                x,y = to_sequences(test_datanew,1,seq_size_new)      
-                
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test_datanew) and predictionInputValue > 0:
+                        selected_element = np.concatenate((train_datanew[-seq_size_new:], test_datanew[0:predictionInputValue]), axis=0)  
+                        x,y = to_sequences(selected_element,1,seq_size_new)
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:
+                    x,y = to_sequences(test_datanew,1,seq_size_new)                      
                 start_predict = time.time()
                 test_pred = model.predict(x)
                 end_predict = time.time()
@@ -812,9 +832,10 @@ def Predict():
                 
                 y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
                 testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
-                
-                eda_model(y,test_pred,column_prediction,algorithm)
-                
+                if  usechild == 'on':
+                    eda_model_child(y,test_pred,column_prediction,algorithm)
+                else:
+                    eda_model(y,test_pred,column_prediction,algorithm)
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
@@ -867,7 +888,15 @@ def Predict():
                 model_lstm = LSTM_exist(train, output_lstm, seq_size_lstm, hidden_neurons_lstm, model_path_lstm)
                 end_train = time.time()
                 
-                testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test) and predictionInputValue > 0:
+                        selected_element = np.concatenate((train[-seq_size_lstm:], test[0:predictionInputValue]), axis=0)  
+                        testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(selected_element,seq_size_lstm)
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else: 
+                    testX_LSTM, testY_LSTM = to_sequences_multivariate_lstm(test,seq_size_lstm)           
                 
                 start_predict = time.time()
                 result_LSTM = model_lstm.predict(testX_LSTM) 
@@ -878,7 +907,7 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5) 
                                                                 
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_temp,column_prediction,algorithm)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,array_temp,column_prediction,algorithm,usechild)
                 
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction,
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
@@ -904,7 +933,15 @@ def Predict():
                 model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new,algorithm)
                 end_train = time.time()
                 
-                testX_LSTM_new, testY_LSTM_new = to_sequences_multivariate_lstm(test_new, seq_size_lstm_new)                               
+                if  usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test_new) and predictionInputValue > 0:
+                        selected_element = np.concatenate((train_new[-seq_size_lstm_new:], test_new[0:predictionInputValue]), axis=0)  
+                        testX_LSTM_new, testY_LSTM_new = to_sequences_multivariate_lstm(selected_element,seq_size_lstm_new)
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:
+                    testX_LSTM_new, testY_LSTM_new = to_sequences_multivariate_lstm(test_new, seq_size_lstm_new)                               
                 
                 start_predict = time.time()
                 result_LSTM_new = model_new.predict(testX_LSTM_new) 
@@ -912,7 +949,7 @@ def Predict():
                 
                 predict_LSTM_real = scaler.inverse_transform(result_LSTM_new)
                 textY_LSTM_real = scaler.inverse_transform(testY_LSTM_new)   
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM_new,testY_LSTM_new,predict_LSTM_real,textY_LSTM_real,array_column_new,column_prediction,algorithm)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(result_LSTM_new,testY_LSTM_new,predict_LSTM_real,textY_LSTM_real,array_column_new,column_prediction,algorithm,usechild)
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                             
@@ -948,25 +985,37 @@ def Predict():
                     p = 14
                     array_temp = array_HCM
                 
-                scaled_data, scaler = scale_data(global_data[array_temp])
+                scaled_data, scaler = scale_data(global_data[array_temp])                   
                 train, test = split_data_default(scaled_data)            
                 start_train = time.time()
                 model_var, result = VAR_exist(train,p)
                 end_train = time.time()
-                
+
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test) and predictionInputValue > 0:
+                        test_temp = test[0:predictionInputValue]
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:
+                    test_temp = test
                 start_predict = time.time()
-                result_var = VAR_forecast(train,test,result,p)
+                result_var = VAR_forecast(train,test_temp,result,p)
                 end_predict = time.time()
                 
-                predict_var,test_var = Extract_test_predict_var(column_prediction, array_temp, result_var, test)
-                predict_var_real,test_var_real = scale_data_original_var(column_prediction, array_temp, scaler, result_var, test)
+                predict_var,test_var = Extract_test_predict_var(column_prediction, array_temp, result_var, test_temp)
+                
+                predict_var_real,test_var_real = scale_data_original_var(column_prediction, array_temp, scaler, result_var, test_temp)
                 
                 testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(test_var, predict_var)
                 testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(test_var_real, predict_var_real)
                 
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
-                eda_model(test_var,predict_var,column_prediction,algorithm)
+                if usechild == "on":
+                    eda_model_child(test_var,predict_var,column_prediction,algorithm)
+                else:
+                    eda_model(test_var,predict_var,column_prediction,algorithm)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
                                 testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
@@ -979,24 +1028,35 @@ def Predict():
                 split_ratio_var_new, p_max = get_Var_param()
                 scaled_data, scaler = scale_data(global_data[array_column_new])
                 train_new, test_new  = split_data_new(scaled_data,split_ratio_var_new)
-                        
-                start_train = time.time()
-                model_var, result_new,p_optimize = VAR_New(train_new,test_new,p_max)
-                end_train = time.time()
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test_new) and predictionInputValue > 0:
+                        test_new_temp = test_new[0:predictionInputValue]
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:
+                    test_new_temp = test_new    
                 
+                start_train = time.time()
+                model_var, result_new,p_optimize = VAR_New(train_new,test_new_temp,p_max)
+                end_train = time.time()
+                    
                 start_predict = time.time()
-                result_var_new = VAR_forecast(train_new,test_new,result_new,p_optimize)
+                result_var_new = VAR_forecast(train_new,test_new_temp,result_new,p_optimize)
                 end_predict = time.time()
                             
-                predict_var_new,test_var_new = Extract_test_predict_var(column_prediction, array_column_new, result_var_new, test_new)
-                predict_var_new_real,test_var_new_real = scale_data_original_var(column_prediction, array_column_new, scaler, result_var_new, test_new)
+                predict_var_new,test_var_new = Extract_test_predict_var(column_prediction, array_column_new, result_var_new, test_new_temp)
+                predict_var_new_real,test_var_new_real = scale_data_original_var(column_prediction, array_column_new, scaler, result_var_new, test_new_temp)
                 
                 testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(test_var_new, predict_var_new)
                 testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(test_var_new_real, predict_var_new_real)
                 
                 time_train = round(end_train - start_train, 5)
-                time_predict = round(end_predict - start_predict, 5)    
-                eda_model(test_var_new,predict_var_new,column_prediction,algorithm)        
+                time_predict = round(end_predict - start_predict, 5)
+                if usechild == "on":
+                    eda_model_child(test_var_new,predict_var_new,column_prediction,algorithm)
+                else:    
+                    eda_model(test_var_new,predict_var_new,column_prediction,algorithm)        
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
                                 testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
@@ -1055,7 +1115,16 @@ def Predict():
                 train, test = split_data_default(scaled_data)
                 
                 trainX, trainY = to_sequences_multivariate_varnn(train,p_lag)
-                testX, testY = to_sequences_multivariate_varnn(test,p_lag)
+                
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test) and predictionInputValue > 0:
+                        selected_element = np.concatenate((train[-p_lag:], test[0:predictionInputValue]), axis=0) 
+                        testX, testY = to_sequences_multivariate_varnn(selected_element,p_lag)
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:
+                    testX, testY = to_sequences_multivariate_varnn(test,p_lag)
 
                 start_train = time.time()
                 model_varnn = VARNN_exist(trainX,output_varnn,p_lag,hidden_neurons_varnn,model_path_varnn)
@@ -1067,8 +1136,7 @@ def Predict():
                 
                 testPredict_inverse = scaler.inverse_transform(testPredict)
                 testY_inverse = scaler.inverse_transform(testY)
-                
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real= LSTM_Predict(testPredict,testY,testPredict_inverse,testY_inverse,array_temp,column_prediction,algorithm)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real= LSTM_Predict(testPredict,testY,testPredict_inverse,testY_inverse,array_temp,column_prediction,algorithm,usechild)
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
@@ -1085,7 +1153,15 @@ def Predict():
                 scaled_data, scaler = scale_data(global_data[array_column_new])
                 train_new, test_new = split_data_new(scaled_data,split_ratio_varnn_new)
                 trainX_new, trainY_new = to_sequences_multivariate_varnn(train_new,order_lag_var_new)
-                testX_new, testY_new = to_sequences_multivariate_varnn(test_new,order_lag_var_new)
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue) 
+                    if predictionInputValue <= len(test_new) and predictionInputValue > 0:
+                        selected_element = np.concatenate((train_new[-order_lag_var_new:], test_new[0:predictionInputValue]), axis=0) 
+                        testX_new, testY_new = to_sequences_multivariate_varnn(selected_element,order_lag_var_new)
+                    else:  
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:  
+                    testX_new, testY_new = to_sequences_multivariate_varnn(test_new,order_lag_var_new)
 
                 start_train = time.time()
                 model_varnn_new = VARNN_new(output_varnn_new, order_lag_var_new, hidden_neurons_varnn_new,trainX_new,trainY_new, epochs_varnn_new, batch_sizes_varnn_new)
@@ -1098,7 +1174,7 @@ def Predict():
                 testPredict_inverse_new = scaler.inverse_transform(testPredict_new)
                 testY_inverse_new = scaler.inverse_transform(testY_new)
                 
-                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(testPredict_new,testY_new,testPredict_inverse_new,testY_inverse_new,array_column_new,column_prediction,algorithm)
+                testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real = LSTM_Predict(testPredict_new,testY_new,testPredict_inverse_new,testY_inverse_new,array_column_new,column_prediction,algorithm,usechild)
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
@@ -1127,13 +1203,22 @@ def Predict():
                 p, d, q = model_arima.order
                 seasonal_order = model_arima.seasonal_order
                 
-                predictions_arima,time_predict = ARIMA_Predict(train,test,p,d,q,seasonal_order)    
-                mse , rmse , mae = calculate_metrics(test ,predictions_arima)  
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue)
+                    test_child = test[0:predictionInputValue]
+                    predictions_arima,time_predict = ARIMA_Predict(train,test_child,p,d,q,seasonal_order)                                        
+                    test = test_child
+                else:    
+                    predictions_arima,time_predict = ARIMA_Predict(train,test,p,d,q,seasonal_order)    
                 
-                predictions_arima_real, test_arima_real = scale_data_original_arima(test,predictions_arima,scaler)
+                predictions_arima_real, test_arima_real = scale_data_original_arima(test,predictions_arima,scaler,usechild, predictionInputValue)
+                mse , rmse , mae = calculate_metrics(test,predictions_arima) 
                 mse_real, rmse_real, mae_real = calculate_metrics(test_arima_real,predictions_arima_real)
                 time_train = round(end_train - start_train, 5)
-                eda_model(test,predictions_arima,column_prediction,algorithm)   
+                if usechild == 'on':
+                    eda_model_child(test_child,predictions_arima,column_prediction,algorithm)
+                else:
+                    eda_model(test,predictions_arima,column_prediction,algorithm)   
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction,
                             testScore_mse=mse,testScore_rmse=rmse,testScore_mae=mae,
                             testScore_mse_real=mse_real, testScore_rmse_real = rmse_real,testScore_mae_real = mae_real,
@@ -1154,14 +1239,26 @@ def Predict():
                 p_new,d_new,q_new  = model_arima_new.order
                 seasonal_order= model_arima_new.seasonal_order
                 
-                predictions_arima_new,time_predict_new = ARIMA_Predict(train_new,test_new,p_new,d_new,q_new,seasonal_order)    
-                mse , rmse , mae = calculate_metrics(test_new,predictions_arima_new)  
+                if usechild == 'on':
+                    predictionInputValue = int(predictionInputValue)
+                    if predictionInputValue <= len(test_new) and predictionInputValue > 0:
+                        test_child = test_new[0:predictionInputValue]
+                        predictions_arima_new,time_predict_new = ARIMA_Predict(train_new,test_child,p_new,d_new,q_new,seasonal_order)                                        
+                        test_new = test_child
+                    else:
+                        return jsonify({'message': 'Error: Number must be less than or equal to the test value.'}), 400
+                else:
+                    predictions_arima_new,time_predict_new = ARIMA_Predict(train_new,test_new,p_new,d_new,q_new,seasonal_order)    
                 
-                predictions_arima_real_new,test_arima_real_new = scale_data_original_arima(test_new,predictions_arima_new,scaler)           
+                predictions_arima_real_new,test_arima_real_new = scale_data_original_arima(test_new,predictions_arima_new,scaler,usechild, predictionInputValue)           
+                mse , rmse , mae = calculate_metrics(test_new,predictions_arima_new)  
                 mse_real, rmse_real, mae_real = calculate_metrics(test_arima_real_new,predictions_arima_real_new)
                 time_train = round(end_train - start_train, 5)
                 time_predict = time_predict_new
-                eda_model(test_new,predictions_arima_new,column_prediction,algorithm)
+                if usechild == 'on':
+                    eda_model_child(test_child,predictions_arima_new,column_prediction,algorithm)
+                else:
+                    eda_model(test_new,predictions_arima_new,column_prediction,algorithm)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=mse,testScore_rmse=rmse,testScore_mae=mae,
                                 testScore_mse_real=mse_real, testScore_rmse_real = rmse_real,testScore_mae_real = mae_real,
