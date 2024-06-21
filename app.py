@@ -1311,4 +1311,4 @@ def get_columns():
     return jsonify({'message': 'Received'}), 200
     
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(host='0.0.0.0',port="8400",debug=True)
