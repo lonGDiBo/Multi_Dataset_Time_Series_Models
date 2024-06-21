@@ -68,7 +68,6 @@
                         var menuIcon = document.querySelector('#menu-icon'); // Select the menu icon
                         var links = document.querySelectorAll('.my-link-page'); // Select the links
                         var logoText = document.querySelector('#logo-text'); // Select the logo text
-
                         checkbox.addEventListener('change', function () {
                             if (this.checked) {
                                 body.style.backgroundColor = 'black';
@@ -1076,7 +1075,7 @@
                         </div>
                         <div id="ordercontainer" style="display: flex;">
                             <div id="dodolag">
-                                <p id="orderlag">Order of lags:</p>
+                                <p id="orderlag">Lags of order:</p>
                             </div>
                             <p id="orderDisplay" style="margin-left: 5px;"></p>
                         </div>
@@ -1133,8 +1132,6 @@
                         'predictionInputValue': predictionInputValue
                     },
                     success: function (data) {
-                        console.log('Trang Thai:', usechild);
-                        console.log('giá trị:', predictionInputValue);
                         predictionStatus.textContent = 'Successfully predicted...';
                         predictionStatus.style.color = 'green';
                         document.getElementById('infor_predict').style.display = 'block';
@@ -1149,7 +1146,7 @@
                         if (data.algorithm == 'algorithm-arima')
                             displayparam_arima();
 
-                        $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
+                        // $("#plot-predict").attr("src", "/static/images/plot_predict_actual.png?" + new Date().getTime());
 
                     },
                     error: function (xhr, textStatus, errorThrown) {
@@ -1276,11 +1273,12 @@
                 mseDisplay.textContent = predictionData.testScore_mse_real;
                 rmseDisplay.textContent = predictionData.testScore_rmse_real;
                 maeDisplay.textContent = predictionData.testScore_mae_real;
-
+                $("#plot-predict").attr("src", "/static/images/plot_predict_actual.png?" + new Date().getTime());
             } else {
                 mseDisplay.textContent = predictionData.testScore_mse;
                 rmseDisplay.textContent = predictionData.testScore_rmse;
                 maeDisplay.textContent = predictionData.testScore_mae;
+                $("#plot-predict").attr("src", "/static/images/plot_predict.png?" + new Date().getTime());
             }
         }
     </script>

@@ -247,9 +247,9 @@ def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayV
     textY_LSTM_real = textY_LSTM_real[:,arrayValue.index(column_prediction)]                   
     testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(textY_LSTM_real, predict_LSTM_real)                      
     if usechild == 'on':
-        eda_model_child(textY_LSTM,predict_LSTM,column_prediction,algorithm)
+        eda_model_child(textY_LSTM,predict_LSTM,column_prediction,algorithm,textY_LSTM_real,predict_LSTM_real)
     else:
-        eda_model(textY_LSTM,predict_LSTM,column_prediction,algorithm)
+        eda_model(textY_LSTM,predict_LSTM,column_prediction,algorithm,textY_LSTM_real,predict_LSTM_real)
     return testScore_mse, testScore_rmse, testScore_mae, testScore_mse_real, testScore_rmse_real, testScore_mae_real
 
 #---------------------------------- END LSTM ----------------------------------
@@ -385,19 +385,16 @@ def get_ARIMA_param():
     return split_ratio,max_ar_order,max_ma_order,seasonal_period
 
 #---------------------------------- END ARIMA ----------------------------------
+#---------------------------------- START METRICS ----------------------------------
 def calculate_metrics(test, predictions):
     mse = mean_squared_error(test, predictions)
     rmse = np.sqrt(mse)
     mae = mean_absolute_error(test, predictions)
     return mse, rmse, mae
-
-
+#---------------------------------- END METRICS ----------------------------------
 #---------------------------------- START EDA ----------------------------------
-def eda_model(y,test_pred,column_prediction,algorithm):
+def title_plot(column_prediction,algorithm):
     global global_name
-    plt.clf() 
-    plt.plot(y,label="Actual value")
-    plt.plot(test_pred,label="Predicted value")
     if algorithm == 'algorithm-ffnn':
         plt.title('FFNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
     elif algorithm == 'algorithm-lstm':
@@ -407,30 +404,60 @@ def eda_model(y,test_pred,column_prediction,algorithm):
     elif algorithm == 'algorithm-varnn':
         plt.title('VARNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
     else:
-        plt.title('ARIMA Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))
-    plt.legend()
-    plt.savefig('static/images/plot_predict.png')
+        plt.title('ARIMA Predictions vs Actual {} Values for {} dataset'.format(column_prediction,global_name))  
+    plt.xlabel("Index")
+    plt.ylabel("Score")
 
-def eda_model_child(y, test_pred, column_prediction, algorithm):
+def plot_data(y, test_pred, column_prediction, algorithm):
+    plt.clf()
+    plt.plot(y, label="Actual value")
+    plt.plot(test_pred, label="Predicted value")
+    title_plot(column_prediction,algorithm)
+    plt.legend()
+
+def plot_data_actual(y, test_pred, column_prediction, algorithm):
+    global global_name
+    y = y.flatten()
+    test_pred = test_pred.flatten()
+    plt.clf()
+    plt.plot(y, label="Actual value")
+    plt.plot(test_pred, label="Predicted value")
+    title_plot(column_prediction,algorithm) 
+    plt.legend()
+    
+def eda_model(y,test_pred,column_prediction,algorithm,y_real,test_pred_real):
+    plot_data(y, test_pred,column_prediction, algorithm)
+    plt.savefig('static/images/plot_predict.png')
+    
+    plot_data_actual(y_real, test_pred_real, column_prediction, algorithm)
+    plt.savefig('static/images/plot_predict_actual.png')    
+
+def eda_model_child(y, test_pred, column_prediction, algorithm,y_real,test_pred_real):
     global global_name
     plt.clf()
     x_range = np.arange(1, len(y) + 1)
     plt.scatter(x_range, y, label="Actual value", color='blue')
     plt.scatter(x_range, test_pred, label="Predicted value", color='red')
     plt.plot(x_range, test_pred, label="Prediction Trend", color='red', linestyle='--')
-    
     plt.xticks(x_range)
-    
-    if algorithm == 'algorithm-ffnn':
-        plt.title('FFNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
-    elif algorithm == 'algorithm-var':
-        plt.title('VAR Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
-    elif algorithm == 'algorithm-varnn':
-        plt.title('VARNN Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
-    else:
-        plt.title('ARIMA Predictions vs Actual {} Values for {} dataset'.format(column_prediction, global_name))
+    title_plot(column_prediction,algorithm)
     plt.legend()
     plt.savefig('static/images/plot_predict.png')
+    
+    plt.clf()
+    x_range = np.arange(1, len(y) + 1)
+    y_real = y_real.flatten()
+    test_pred_real = test_pred_real.flatten()
+    plt.scatter(x_range, y_real, label="Actual value", color='blue')
+    plt.scatter(x_range, test_pred_real, label="Predicted value", color='red')
+    plt.plot(x_range, test_pred_real, label="Prediction Trend", color='red', linestyle='--')
+    plt.xticks(x_range)
+    print(y_real)
+    print(test_pred_real)
+    title_plot(column_prediction,algorithm)
+    plt.legend()
+    plt.savefig('static/images/plot_predict_actual.png')    
+    
 #---------------------------------- END EDA ----------------------------------
 
 # 
@@ -789,15 +816,15 @@ def Predict():
                 end_predict = time.time()
                 testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
                 
-                y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
+                test_pred_real,y_real = scale_data_original(y,test_pred,scaler)                                         
                 testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
-                
+
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 if usechild == 'on':
-                    eda_model_child(y,test_pred,column_prediction,algorithm)
+                    eda_model_child(y,test_pred,column_prediction,algorithm,y_real,test_pred_real)
                 else:
-                    eda_model(y,test_pred,column_prediction,algorithm)
+                    eda_model(y,test_pred,column_prediction,algorithm,y_real,test_pred_real)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=testScore_mse, testScore_rmse = testScore_rmse,testScore_mae = testScore_mae,
                                 testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
@@ -830,12 +857,12 @@ def Predict():
                 
                 testScore_mse, testScore_rmse, testScore_mae = calculate_metrics(y, test_pred)
                 
-                y_real, test_pred_real = scale_data_original(y,test_pred,scaler)                                         
+                test_pred_real,y_real = scale_data_original(y,test_pred,scaler)                                         
                 testScore_mse_real, testScore_rmse_real, testScore_mae_real = calculate_metrics(y_real, test_pred_real)
                 if  usechild == 'on':
-                    eda_model_child(y,test_pred,column_prediction,algorithm)
+                    eda_model_child(y,test_pred,column_prediction,algorithm,y_real,test_pred_real)
                 else:
-                    eda_model(y,test_pred,column_prediction,algorithm)
+                    eda_model(y,test_pred,column_prediction,algorithm,y_real,test_pred_real)
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
@@ -930,7 +957,7 @@ def Predict():
                 train_new, test_new  = split_data_new(scaled_data,split_ratio_lstm_new)
                 
                 start_train = time.time()
-                model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new,algorithm)
+                model_new = LSTM_new(train_new,test_new,output_lstm_new, seq_size_lstm_new, hidden_neurons_lstm_new,epochs_lstm_new,batch_sizes_lstm_new, hidden_layers_lstm_new)
                 end_train = time.time()
                 
                 if  usechild == 'on':
@@ -1013,9 +1040,9 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 if usechild == "on":
-                    eda_model_child(test_var,predict_var,column_prediction,algorithm)
+                    eda_model_child(test_var,predict_var,column_prediction,algorithm, test_var_real, predict_var_real)
                 else:
-                    eda_model(test_var,predict_var,column_prediction,algorithm)
+                    eda_model(test_var,predict_var,column_prediction,algorithm, test_var_real, predict_var_real)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
                                 testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
@@ -1054,9 +1081,9 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = round(end_predict - start_predict, 5)
                 if usechild == "on":
-                    eda_model_child(test_var_new,predict_var_new,column_prediction,algorithm)
+                    eda_model_child(test_var_new,predict_var_new,column_prediction,algorithm,predict_var_new_real,test_var_new_real)
                 else:    
-                    eda_model(test_var_new,predict_var_new,column_prediction,algorithm)        
+                    eda_model(test_var_new,predict_var_new,column_prediction,algorithm,predict_var_new_real,test_var_new_real)        
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=testScore_mse,testScore_rmse=testScore_rmse,testScore_mae=testScore_mae,
                                 testScore_mse_real=testScore_mse_real, testScore_rmse_real = testScore_rmse_real,testScore_mae_real = testScore_mae_real,
@@ -1216,9 +1243,9 @@ def Predict():
                 mse_real, rmse_real, mae_real = calculate_metrics(test_arima_real,predictions_arima_real)
                 time_train = round(end_train - start_train, 5)
                 if usechild == 'on':
-                    eda_model_child(test_child,predictions_arima,column_prediction,algorithm)
+                    eda_model_child(test_child,predictions_arima,column_prediction,algorithm,test_arima_real,predictions_arima_real)
                 else:
-                    eda_model(test,predictions_arima,column_prediction,algorithm)   
+                    eda_model(test,predictions_arima,column_prediction,algorithm,test_arima_real,predictions_arima_real)   
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction,
                             testScore_mse=mse,testScore_rmse=rmse,testScore_mae=mae,
                             testScore_mse_real=mse_real, testScore_rmse_real = rmse_real,testScore_mae_real = mae_real,
@@ -1256,9 +1283,9 @@ def Predict():
                 time_train = round(end_train - start_train, 5)
                 time_predict = time_predict_new
                 if usechild == 'on':
-                    eda_model_child(test_child,predictions_arima_new,column_prediction,algorithm)
+                    eda_model_child(test_child,predictions_arima_new,column_prediction,algorithm,test_arima_real_new,predictions_arima_real_new)
                 else:
-                    eda_model(test_new,predictions_arima_new,column_prediction,algorithm)
+                    eda_model(test_new,predictions_arima_new,column_prediction,algorithm,test_arima_real_new,predictions_arima_real_new)
                 return jsonify(algorithm=algorithm, column_prediction=column_prediction, 
                                 testScore_mse=mse,testScore_rmse=rmse,testScore_mae=mae,
                                 testScore_mse_real=mse_real, testScore_rmse_real = rmse_real,testScore_mae_real = mae_real,
