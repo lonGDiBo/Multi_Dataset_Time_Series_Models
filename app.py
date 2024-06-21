@@ -130,7 +130,7 @@ def VARNN_exist(trainX,outputs,p,hidden_neural,file_path):
     custom_model = CustomModel(ffnn_model, var_model)
     # Compile custom model
     custom_model.compile(optimizer='adam', loss='mse')
-    dummy_input = trainX  # Cung cấp dữ liệu giả
+    dummy_input = trainX 
     a = custom_model(dummy_input)
     custom_model.load_weights(file_path)
     return custom_model
@@ -188,19 +188,6 @@ def model_ffnn_new(train, test, hidden_layers, seq_size, hidden_neurons, epoch, 
     model.compile(loss='mean_squared_error', optimizer='adam', metrics = ['acc'])
     model.fit(trainX, trainY, validation_data=(testX, testY), verbose=0, epochs=epoch, batch_size=batchsize)
     return model
-
-def get_param_ffnn(default_split_ratio,default_hidden_neurons,default_seq_size,default_epochs,default_batch_size,default_hidden_layers):
-   split_ratio_get = global_parameters.get('splitdata',default_split_ratio)
-   if split_ratio_get == 'split73':
-       split_ratio = 0.7
-   else:
-       split_ratio = 0.8
-   hidden_neurons = int(global_parameters.get('Hidden_Neurons', default_hidden_neurons))
-   seq_size = int(global_parameters.get('Data_window_size', default_seq_size))
-   epochs = int(global_parameters.get('Epoch', default_epochs))
-   batch_sizes = int(global_parameters.get('Batch_size', default_batch_size))
-   hidden_layers = int(global_parameters.get('Hidden_Layers', default_hidden_layers))
-   return split_ratio, hidden_neurons,seq_size,epochs,batch_sizes,hidden_layers
 
 def get_param_ffnn_datasetNew():
    split_ratio_get = global_parameters.get('splitdata')
