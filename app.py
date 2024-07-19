@@ -87,7 +87,6 @@ def to_sequences(dataset,timestep , seq_size=1):
         y.append(dataset[i+seq_size, 0])
     return np.array(x),np.array(y)
 
-
 def to_sequences_multivariate_varnn(dataset,p):
     x = []
     y = []
@@ -243,8 +242,8 @@ def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayV
 #---------------------------------- VAR ----------------------------------
 def VAR_exist(train,p):
     model_var = VAR(train)
-    result =  model_var.fit(p)
     return model_var, result
+    result =  model_var.fit(p)
 
 def VAR_New(train,test,p_max):
     mse = 999
@@ -443,8 +442,7 @@ def eda_model_child(y, test_pred, column_prediction, algorithm,y_real,test_pred_
     print(test_pred_real)
     title_plot(column_prediction,algorithm)
     plt.legend()
-    plt.savefig('static/images/plot_predict_actual.png')    
-    
+    plt.savefig('static/images/plot_predict_actual.png')      
 #---------------------------------- END EDA ----------------------------------
 
 # 
