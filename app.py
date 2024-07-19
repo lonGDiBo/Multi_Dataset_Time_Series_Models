@@ -242,8 +242,8 @@ def LSTM_Predict(result_LSTM,testY_LSTM,predict_LSTM_real,textY_LSTM_real,arrayV
 #---------------------------------- VAR ----------------------------------
 def VAR_exist(train,p):
     model_var = VAR(train)
-    return model_var, result
     result =  model_var.fit(p)
+    return model_var, result
 
 def VAR_New(train,test,p_max):
     mse = 999
