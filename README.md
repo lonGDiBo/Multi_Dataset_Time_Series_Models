@@ -3,9 +3,33 @@
 This project builds upon the work of [ Dhoriva U. Wutsqa on the VAR-NN (Vector AutoRegression Neural Network)](https://github.com/lonGDiBo/VARNN-Model-for-Time-Series-Prediction/blob/main/VAR-NN%20MODEL%20FOR%20MULTIVARIATE.pdf) model for time series forecasting . The VAR-NN model combines the strengths of the traditional Vector Autoregressive (VAR) model with the flexibility of Feedforward Neural Networks (FFNN) to handle nonlinear, multivariate time series data. This approach provides robust performance in training and testing phases, demonstrating its ability to capture complex relationships between variables.
 
 In this study, the experimental data consists of [six datasets](https://github.com/lonGDiBo/VARNN-Model-for-Time-Series-Prediction/blob/main/dataset)
-- Two datasets related to weather.()
-- Three datasets containing stock prices from three different corporations. The stock datasets include data for APPLE, AMAZON, and GOOGLE, collected from the Yahoo Finance website using the Python library yfinance.
-- The final dataset provides an overview of Vietnam's macroeconomic indicators.
+- Two datasets related to weather.
+  + The WS Beutenberg weather dataset:  (2010–2023) from the Max Planck Institute contains over 700,000 records sampled every 10 minutes, later resampled to 5,060 daily records. It captures seasonal temperature patterns and includes attributes like pressure, temperature, humidity, vapor pressure deficit, air density, and wind speed, offering valuable insights into weather and seasonal variations.
+
+    ![image](https://github.com/user-attachments/assets/8d5dd83a-6426-4eea-8bb5-a40c05e4ed7b)
+
+  + The WEATHER_HCM dataset contains daily weather data for Ho Chi Minh City from 2009 to 2021, comprising 4,550 records with attributes such as maximum and minimum temperatures, wind speed, rainfall, humidity, cloud cover, atmospheric pressure, and date. The dataset reveals seasonal patterns, as shown by the yearly fluctuations in daily maximum temperatures, making it valuable for analyzing weather trends and climate variability in the region.
+
+    ![image](https://github.com/user-attachments/assets/8bfc2a20-226e-49e0-8588-194d47b919dc)
+
+- Three datasets containing stock prices from three different corporations. The stock datasets include data for APPLE, AMAZON, and GOOGLE, collected from the Yahoo Finance website using the Python library yfinance.Common Attributes Across Datasets: Date: Trading date. Open: Opening price. High: Highest price of the day. Low: Lowest price of the day. Close: Adjusted closing price. Volume: Number of shares traded.
+  + Amazon stock: The AMAZON stock dataset contains historical stock prices spanning 8 years from February 12, 2015, to December 1, 2023, with 2,014 records. The data reveals fluctuations, a general upward trend, and continuous increases and decreases. Notably, stock prices surged significantly between 2016 and 2017, experienced a sharp decline in 2020, and have since recovered in recent years.
+
+      ![image](https://github.com/user-attachments/assets/e84ab542-a9e5-478c-a7a9-aa26a0146f1c)
+
+  +  Apple stock: The APPLE stock dataset contains daily trading statistics for Apple (AAPL) over 8 years, from April 12, 2015, to December 1, 2023, with 2,012 records. The data shows a general upward trend with continuous fluctuations in stock prices, reflecting regular increases and decreases.
+
+      ![image](https://github.com/user-attachments/assets/b2e01b84-0a89-4f8f-bede-ad8a28f2b918)
+
+  +  Google stock: The GOOGLE stock dataset contains daily historical stock prices over 8 years, from December 4, 2015, to December 1, 2023, with 2,012 records. The data reveals fluctuations, with notable growth from 2016 to 2022, followed by a decline in 2023, and a subsequent recovery.
+
+      ![image](https://github.com/user-attachments/assets/179ae96c-1b33-4b19-a9dd-0116c18d42d4)
+
+- The final dataset provides an overview of Vietnam's macroeconomic indicators. The Vietnam macroeconomic dataset provides monthly economic data from 2017 to 2023, consisting of 86 records and 30 attributes. Key attributes include Trade % YoY (trade sector growth compared to the same period the previous year), Food % YoY (changes in food prices year-over-year), and Real GDP Growth % YoY (inflation-adjusted GDP growth year-over-year). This dataset offers valuable insights into Vietnam's economic performance and trends over the years.
+
+     ![image](https://github.com/user-attachments/assets/ec48afe6-4d8e-44f6-8a60-87a45da89f77)
+
+
 
 ## 1. Introduction
 ### Objective:
