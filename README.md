@@ -1,8 +1,8 @@
-# Multi Dataset Time Series Models
+# VARNN for Time Series Prediction
 A comprehensive project for time series forecasting using the VARNN (Vector AutoRegression Neural Network) model. This project includes a comparison with VAR, FFNN, ARIMA, and LSTM models across univariate and multivariate time series tasks, alongside an interactive web demo.
 
 In this study, the experimental data consists of six datasets: https://github.com/lonGDiBo/Multi_Dataset_Time_Series_Models/tree/main/dataset
-- Two datasets related to weather.
+- Two datasets related to weather.()
 - Three datasets containing stock prices from three different corporations. The stock datasets include data for APPLE, AMAZON, and GOOGLE, collected from the Yahoo Finance website using the Python library yfinance.
 - The final dataset provides an overview of Vietnam's macroeconomic indicators.
 
@@ -16,7 +16,7 @@ In this study, the experimental data consists of six datasets: https://github.co
 - Integration of VAR for capturing multivariate relationships and FFNN for learning complex nonlinear patterns.
 - Emphasis on the strengths and weaknesses of each model type: statistical, neural network, and hybrid.
 - Support for multiple datasets, making the project versatile for various domains like energy forecasting, financial markets, and weather prediction.
-- Metrics such as MAE, RMSE, and MAPE are used for evaluation.
+- Metrics such as MAE, RMSE, and MSE are used for evaluation.
 ### Technologies Used:
 - Python, Flask, scikit-learn, TensorFlow, and others
   
@@ -91,7 +91,142 @@ Identify the Appropriate Lag
 
 - Once the best model is identified, use it to make predictions on new, unseen data. Pass the input data through the trained model, following the described steps, to obtain predictions.
 
-## 4. How to run code
+### How to Select Variables for Prediction in Multivariate Models
+- Domain Knowledge: Use expert knowledge to identify variables likely to affect the target variable.
+- Correlation Analysis: Identify variables strongly correlated with the target and remove redundant predictors.
+- Granger Causality Test: Select variables with significant temporal relationships (p-value < 0.05).
+- Feature Importance: Use ML models (e.g., Random Forest) to rank variables by importance.
+- Lagged Variables: Include optimal time lags of predictors and the target using AIC/BIC or PACF.
+- Dimensionality Reduction: Use PCA or autoencoders to reduce variables while preserving key information.
+- Regularization: Apply Lasso or Elastic Net to select relevant variables and handle multicollinearity.
+- Cross-Validation: Test variable combinations and retain those consistently improving accuracy.
+
+## 4. Result
+
+All models in the project are made with the best optimized parameters to ensure fair comparisons and avoid the influence of skewed factors.
+
+Model Performance on Datasets
+After conducting experiments across six datasets (two weather, three stock prices, and one macroeconomic dataset), the following results were obtained:
+### Evaluation Metrics:
+- Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and  Mean Squared Error (MSE) were used to evaluate the models.
+- Normalized and actual data values were considered for robust comparisons.
+- Execution time
+
+### Model Comparisons:
+- VARNN outperformed traditional models like VAR and ARIMA in capturing nonlinear relationships in multivariate datasets.
+- LSTM performed comparably to VARNN for longer sequences but required more computational resources and tuning.
+- FFNN was effective for simple univariate tasks but struggled with multivariate scenarios.
+- ARIMA showed strong results for stationary, univariate data but was less effective for datasets with high variability.
+
+### Detailed Model Performance
+The table below presents the detailed performance metrics (MSE, RMSE, MAE) for the models on both normalized and actual values, as well as their training and testing times:
+#### * STOCK data
+##### ** AMAZON Dataset
+Metric | VARNN | FFNN | ARIMA | VAR | LSTM
+--- | --- | --- | --- |--- |---
+MSE | 0.0002528 | 0.0003189 | 0.0003343 | 0.0002821 | 0.0002554
+RMSE | 0.0159 | 0.01785 | 0.01852 | 0.01679 | 0.01598
+MAE | 0.01133 | 0.01326 | 0.01333 | 0.01164 | 0.01158
+MSE (Actual Values) | 6.685 | 8.440 | 9.079 | 7.458 | 6.754
+RMSE (Actual Values) | 2.585 | 2.905 | 3.013 | 2.730 | 2.598
+MAE (Actual Values) | 1.843 | 2.158 | 2.168 | 1.865 | 1.884
+Training Time (s) | 57.333 | 976.57 | 71.5 | 10.6 | 2142.258
+Testing Time (s) | 0.248 | 0.642 | 224.012 | 0.01 | 0.522
+
+- Compare each variable of the VARNN model with other models
+  
+![image](https://github.com/user-attachments/assets/9428c4df-7803-4b37-a803-b42de829dadf)
+
+##### ** APPLE Dataset
+Metric | VARNN | FFNN | ARIMA | VAR | LSTM
+--- | --- | --- | --- |--- |---
+MSE	| 0.0001938	| 0.0002472  |	0.000244 |	0.000187 |	0.0001776
+RMSE	| 0.01392 |	0.01572 |	0.01562 |	0.0137 |	0.01332
+MAE |	0.01048 |	0.01199 |	0.01176 |	0.00997 |	0.00985
+MSE (Actual Values)	| 5.892 |	7.501 |	7.385 |	5.704 |	5.397
+RMSE (Actual Values)|	2.427 |	2.738|	2.717|	2.388|	2.323
+MAE (Actual Values)|	1.827|	2.089|	2.045|	1.737|	1.716
+Training Time (s)|	66.11	|858.271|	58.613|	8.003|	2139.778
+Testing Time (s)|	0.188	|0.655|	176.036|	0.0108|	0.457
+
+- Compare each variable of the VARNN model with other model
+  
+![image](https://github.com/user-attachments/assets/772509ab-6782-4379-994e-0f539d3271b4)
+
+
+##### ** GOOGLE Dataset
+Metric | VARNN | FFNN | ARIMA | VAR | LSTM
+--- | --- | --- | --- |--- |---
+MSE	| 0.0003305	| 0.0003865|	0.000384	|0.000316	|0.0003273
+RMSE	| 0.01818|	0.01966	|0.01959	|0.01777|	0.01809
+MAE	|0.01334	|0.01469	|0.01461|	0.01257	|0.01292
+MSE (Actual Values)|	4.565	|5.434	|5.312	|4.361|	4.523
+RMSE (Actual Values)|	2.136|	2.331|	2.304	|2.088|	2.126
+MAE (Actual Values)|	1.569|	1.728	|1.719	|1.478|	1.519
+Training Time (s)|	62.996	|714.748|	62.182|	0.0075|	283.026
+Testing Time (s)|	0.134	|0.996	|165.392|	0.021	|0.724
+
+- Compare each variable of the VARNN model with other models
+  
+![image](https://github.com/user-attachments/assets/4272a193-d036-4960-8255-01b43928753d)
+
+#### * Weather data
+##### ** HoChiMinh wheather dataset
+Metric | VARNN | FFNN | ARIMA | VAR | LSTM
+--- | --- | --- | --- |--- |---
+MSE	|0.004688	|0.004859	|0.00641|	0.004707|	0.005544
+RMSE	|0.06847|	0.06971|	0.08006|	0.06861	|0.07446
+MAE	|0.04821	|0.04853|	0.05763	|0.04813|	0.05275
+MSE (Actual Values)|	17.431	|18.234 | 22.137	17.464	|18.548
+RMSE (Actual Values)|	4.175|	4.270	|4.704	|4.179	|4.306
+MAE (Actual Values)|	2.047	||2.052	|3.805|	2.088|	2.227
+Training Time (s)|	87.637	|799.312	|2921.789	|0.094|	4238.094
+Testing Time (s)	|0.854|	7200	|0.058	|0.741|	0.264
+
+- Compare each variable of the VARNN model with other models
+  
+![image](https://github.com/user-attachments/assets/319d4484-c787-47e5-8b28-b94da73cd86e)
+
+##### ** WS Beutenberg wheather dataset
+Metric | VARNN | FFNN | ARIMA | VAR | LSTM
+--- | --- | --- | --- |--- |---
+MSE	 |0.003258	 |0.003466 |	0.006359	 |0.003302 |	0.003208
+RMSE	 |0.05707	 |0.05887 |	0.08265 |	0.05746	 |0.05664
+MAE	 |0.03932	 |0.03977	 |0.06126	 |0.03942 |	0.03883
+MSE (Actual Values) |	27.77	 |29.548 |	41.632	 |28.149 |	27.348
+RMSE (Actual Values) |	5.108	 |5.435 |	6.452	 |5.177 |	5.030
+MAE (Actual Values) |	2.692 |	2.865 |	3.399 |	2.729 |	2.525
+Training Time (s) |	144.885	 |1744.04	 |3531.169 |	0.03	 |1887.808
+Testing Time (s)	 |0.645	 |1.753 |	13320 |	0.067 |	0.698
+
+- Compare each variable of the VARNN model with other models
+  
+![image](https://github.com/user-attachments/assets/32edb2e6-7acc-4449-b092-b875a8099509)
+
+#### * Vietnam's macroeconomic dataset
+Metric | VARNN | FFNN | ARIMA | VAR | LSTM
+--- | --- | --- | --- |--- |---
+MSE	 |0.00265 |	0.00323 |	0.00458 |	0.00328	 |0.00397
+RMSE	 |0.05149	 |0.05687	 |0.06770	 |0.05727 |	0.06302
+MAE	 |0.03773	 |0.04068	 |0.04394	 |0.04000 |	0.05035
+MSE (Actual Values) |	1.705 |	1.95653 |	2.8318 |	2.03821	 |2.77341
+RMSE (Actual Values)	 |1.305	 |1.398 |	1.682	 |1.665 |	1.427
+MAE (Actual Values)	 |0.909	 |0.987	 |0.996 |	1.288 |	0.979
+Training Time (s) |	21.12 |	61.22	 |4.323	 |0.154 |	46.667
+Testing Time (s)	 |0.169	 |0.267	 |4.821 |	0.015 |	0.578
+
+- Compare each variable of the VARNN model with other models
+  
+![image](https://github.com/user-attachments/assets/b81cceff-8621-4e53-b2c0-c5f529956e37)
+
+### General Conclusion
+- When comparing the VARNN model with univariate models, VARNN demonstrates superior performance in both efficiency and training/testing time. Univariate models require training each variable separately, which prevents interactions between variables and results in significantly weaker performance compared to VARNN.
+
+- In comparison with multivariate models, VARNN occasionally underperforms on certain datasets. Specifically, the LSTM model outperforms VARNN in terms of accuracy on some datasets. However, the training and prediction time of VARNN is significantly shorter, making it more advantageous in scenarios where fast execution is required, and the accuracy only needs to meet acceptable thresholds.
+
+- Additionally, VARNN shows a considerable advantage when working with datasets that have fewer observations. Its ability to achieve robust results on smaller datasets further solidifies its practicality and versatility in a wide range of time series forecasting tasks.
+
+## 5. How to run code
 ### Run Locally 
  - Clone the repository:
    - ```git clone https://github.com/lonGDiBo/Multi_Dataset_Time_Series_Models.git```
@@ -102,7 +237,7 @@ Identify the Appropriate Lag
   - ```python app.py```
 - Open your browser and navigate to: http://localhost:5000. (flask run port 5000) 
 
-### 5. How to Use the Web Prediction Application
+### 6. How to Use the Web Prediction Application
 The time series prediction application is built using the Flask framework. It allows users to make predictions on datasets with optimized model parameters, and models are saved in h5 format. Additionally, users can upload their own datasets from personal devices to perform time series predictions using algorithms such as VARNN, FFNN, LSTM, VAR, and ARIMA.
 
 - Click on the "Upload" button to upload your dataset or  select from preloaded datasets that have been trained with the best-optimized parameters for each model. This allows for quick and efficient predictions without additional configuration.
@@ -132,7 +267,11 @@ This ensures the dataset is clean and ready for prediction.
 ![image](https://github.com/user-attachments/assets/a1cf773f-23bf-4b38-b73a-4e4d1b7cf10d)
 
 
+### Contact
 
+For any inquiries or support, feel free to reach out at
+- Email:  [longpm211@gmail.com].
+- Linked: [longl](https://www.linkedin.com/in/minhlongde/)
 
 
 
