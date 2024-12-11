@@ -1,7 +1,8 @@
 # VARNN for Time Series Prediction
-A comprehensive project for time series forecasting using the VARNN (Vector AutoRegression Neural Network) model. This project includes a comparison with VAR, FFNN, ARIMA, and LSTM models across univariate and multivariate time series tasks, alongside an interactive web demo.
 
-In this study, the experimental data consists of six datasets: https://github.com/lonGDiBo/Multi_Dataset_Time_Series_Models/tree/main/dataset
+This project builds upon the work of [ Dhoriva U. Wutsqa on the VAR-NN (Vector AutoRegression Neural Network)](https://github.com/lonGDiBo/VARNN-Model-for-Time-Series-Prediction/blob/main/VAR-NN%20MODEL%20FOR%20MULTIVARIATE.pdf) model for time series forecasting . The VAR-NN model combines the strengths of the traditional Vector Autoregressive (VAR) model with the flexibility of Feedforward Neural Networks (FFNN) to handle nonlinear, multivariate time series data. This approach provides robust performance in training and testing phases, demonstrating its ability to capture complex relationships between variables.
+
+In this study, the experimental data consists of [six datasets](https://github.com/lonGDiBo/VARNN-Model-for-Time-Series-Prediction/blob/main/dataset)
 - Two datasets related to weather.()
 - Three datasets containing stock prices from three different corporations. The stock datasets include data for APPLE, AMAZON, and GOOGLE, collected from the Yahoo Finance website using the Python library yfinance.
 - The final dataset provides an overview of Vietnam's macroeconomic indicators.
