@@ -116,6 +116,9 @@ Identify the Appropriate Lag
 
 - Once the best model is identified, use it to make predictions on new, unseen data. Pass the input data through the trained model, following the described steps, to obtain predictions.
 
+#### Workflow: Data Processing to Model Evaluation
+![image](https://github.com/user-attachments/assets/3365bd37-b784-41f4-bb4a-532c2f17461a)
+
 ### How to Select Variables for Prediction in Multivariate Models
 - Domain Knowledge: Use expert knowledge to identify variables likely to affect the target variable.
 - Correlation Analysis: Identify variables strongly correlated with the target and remove redundant predictors.
